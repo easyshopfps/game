@@ -1195,6 +1195,10 @@ function togglePw(id, btn) {
                 if(id === 'tab-product-ids') {
                     this.loadProductIds();
                 }
+                // โหลดประกาศเมื่อเปิด tab ประกาศ
+                if(id === 'tab-announcement') {
+                    this.loadAnnouncementAdmin();
+                }
                 
                 this.renderAdmin();
             },
@@ -2429,6 +2433,14 @@ function togglePw(id, btn) {
 
             // ============ USER SYSTEM ============
             
+            toggleSecurityMenu: function() {
+                const sub = document.getElementById('security-submenu');
+                const chevron = document.getElementById('security-chevron');
+                const isOpen = sub.style.display !== 'none';
+                sub.style.display = isOpen ? 'none' : 'block';
+                chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+            },
+
             toggleUserMenu: function() {
                 if(!currentUser) {
                     this.openUserAuth();
@@ -2437,12 +2449,16 @@ function togglePw(id, btn) {
                 const menu = document.getElementById('user-menu');
                 const isOpening = menu.style.display === 'none' || menu.style.display === '';
                 menu.style.display = isOpening ? 'block' : 'none';
-                // ไม่ให้ nav-profile ค้าง active — เคลียร์ทันทีหลังปิด
                 const navProfile = document.getElementById('nav-profile');
                 if(isOpening) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     if(navProfile) navProfile.classList.remove('active');
+                    // ปิด security submenu ด้วย
+                    const sub = document.getElementById('security-submenu');
+                    const chevron = document.getElementById('security-chevron');
+                    if(sub) sub.style.display = 'none';
+                    if(chevron) chevron.style.transform = 'rotate(0deg)';
                 }
             },
 
@@ -2551,12 +2567,8 @@ function togglePw(id, btn) {
                     return;
                 }
                 // ตรวจชื่อผู้ใช้
-                if(!/^[A-Z]/.test(username)) {
-                    NotificationManager.error('ຊື່ຜູ້ໃຊ້: ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍຕົວພິມໃຫຍ່ 1 ຕົວ (A-Z) ຕາມດ້ວຍຕົວອັກສອນໃດກໍໄດ້');
-                    return;
-                }
                 if(username.length < 5) {
-                    NotificationManager.error('ຊື່ຜູ້ໃຊ້: ຕ້ອງມີຢ່າງໜ້ອຍ 5 ຕົວອັກສອນ (ຕົວໃຫຍ່+ຕົວໜ້ອຍ/ຕົວເລກ ລວມກັນ)');
+                    NotificationManager.error('ຊື່ຜູ້ໃຊ້: ຕ້ອງມີຢ່າງໜ້ອຍ 5 ຕົວອັກສອນ');
                     return;
                 }
                 if(username.length > 20) {
@@ -2742,12 +2754,8 @@ function togglePw(id, btn) {
                 if(await CustomConfirm.show('ແນ່ໃຈບໍ່ວ່າຕ້ອງການອອກຈາກລະບົບ?', {title:'ອອກຈາກລະບົບ', icon:'fa-sign-out-alt'})) {
                     currentUser = null;
                     localStorage.removeItem('user_session');
-                    this.updateUserUI();
-                    document.getElementById('user-menu').style.display = 'none';
-                    // Clear all auth forms
-                    this._clearLoginForm();
-                    this._clearRegisterForm();
-                    NotificationManager.info('ອອກຈາກລະບົບສຳເລັດ');
+                    // Reload ໜ້າເວັບໃໝ່
+                    location.reload();
                 }
             },
 
@@ -2858,12 +2866,32 @@ function togglePw(id, btn) {
                     NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນ');
                     return;
                 }
+                if(current !== currentUser.password) {
+                    NotificationManager.error('ລະຫັດຜ່ານປັດຈຸບັນບໍ່ຖືກ');
+                    return;
+                }
                 if(newPass !== confirm) {
                     NotificationManager.error('ລະຫັດໃໝ່ບໍ່ຕົງກັນ');
                     return;
                 }
-                if(current !== currentUser.password) {
-                    NotificationManager.error('ລະຫັດຜ່ານປັດຈຸບັນບໍ່ຖືກ');
+
+                // ກວດ password strength ເໝືອນຕອນສະໝັກ
+                const checks = {
+                    upper: /[A-Z]/.test(newPass),
+                    lower: /[a-z]/.test(newPass),
+                    num: /[0-9]/.test(newPass),
+                    special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(newPass),
+                    long: newPass.length >= 8
+                };
+                const score = Object.values(checks).filter(Boolean).length;
+                if(score < 5) {
+                    let missing = [];
+                    if(!checks.upper) missing.push('ຕົວພິມໃຫຍ່ A-Z');
+                    if(!checks.lower) missing.push('ຕົວພິມນ້ອຍ a-z');
+                    if(!checks.num) missing.push('ຕົວເລກ 0-9');
+                    if(!checks.special) missing.push('ອັກຂະລະພິເສດ !@#$');
+                    if(!checks.long) missing.push('ຢ່າງໜ້ອຍ 8 ຕົວ');
+                    NotificationManager.error('ລະຫັດຜ່ານບໍ່ເຂັ້ມແຂງ! ຍັງຂາດ: ' + missing.join(', '));
                     return;
                 }
 
@@ -2875,18 +2903,14 @@ function togglePw(id, btn) {
                     session_token: newToken
                 }).eq('id', currentUser.id);
                 
-                // ອັບເດດ session ຂອງ user ປັດຈຸບັນ (re-login ຕົວເອງ)
                 currentUser.password = newPass;
                 currentUser.session_token = newToken;
                 this.saveUserSession();
                 hideProcessing();
-                NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ! ທຸກ Device ອື່ນຈະຖືກ Logout ອັດຕະໂນມັດ');
+                NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
                 
-                // Reset form
-                document.getElementById('current-password').value = '';
-                document.getElementById('new-password').value = '';
-                document.getElementById('confirm-password').value = '';
-                router.back();
+                // Reload ໜ້າເວັບໃໝ່
+                setTimeout(() => { location.reload(); }, 1500);
             },
 
             navProfile: function() {
