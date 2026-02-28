@@ -200,7 +200,7 @@
             <i class="fas fa-coins"></i>
             <span>ເຕີມເງິນ</span>
         </div>
-        <div class="mobile-nav-item" onclick="app.toggleUserMenu()" id="nav-profile">
+        <div class="mobile-nav-item" onclick="app.navProfile()" id="nav-profile">
             <i class="fas fa-user"></i>
             <span>ໂປຣໄຟລ໌</span>
         </div>
@@ -387,12 +387,55 @@
         <div class="section-title"><h3>ປ່ຽນລະຫັດຜ່ານ</h3></div>
         
         <div class="bank-card">
-            <input type="password" id="current-password" class="form-control" placeholder="ລະຫັດຜ່ານປັດຈຸບັນ">
-            <input type="password" id="new-password" class="form-control" placeholder="ລະຫັດຜ່ານໃໝ່">
-            <input type="password" id="confirm-password" class="form-control" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່">
+            <div style="position:relative; margin-bottom:12px;">
+                <input type="password" id="current-password" class="form-control" placeholder="ລະຫັດຜ່ານປັດຈຸບັນ" style="padding-right:46px;">
+                <button type="button" onclick="togglePw('current-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+            <div style="position:relative; margin-bottom:12px;">
+                <input type="password" id="new-password" class="form-control" placeholder="ລະຫັດຜ່ານໃໝ່" style="padding-right:46px;">
+                <button type="button" onclick="togglePw('new-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+            <div style="position:relative; margin-bottom:8px;">
+                <input type="password" id="confirm-password" class="form-control" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່" style="padding-right:46px;">
+                <button type="button" onclick="togglePw('confirm-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+
+            <div style="text-align:right; margin-bottom:15px;">
+                <button onclick="app.openForgotFromProfile()" style="background:none; border:none; color:#aaa; font-size:12px; cursor:pointer; text-decoration:underline;">ລືມລະຫັດ?</button>
+            </div>
             
             <button class="btn btn-red" style="width:100%; padding:15px;" onclick="app.changePassword()">
                 <i class="fas fa-save"></i> ບັນທຶກ
+            </button>
+        </div>
+    </main>
+
+    <!-- ===== ປ່ຽນ PIN 6 ຕົວ ===== -->
+    <main id="view-change-pin" class="page-view container hidden" style="padding-top:15px; padding-bottom: 20px;">
+        <button class="btn btn-outline btn-sm" onclick="router.back()"><i class="fas fa-arrow-left"></i> ກັບຄືນ</button>
+        
+        <div class="section-title"><h3>ປ່ຽນ PIN 6 ຕົວ</h3></div>
+
+        <div style="background:#111; border-radius:12px; padding:12px 15px; margin-bottom:15px; border:1px solid #222;">
+            <p style="font-size:12px; color:#aaa; margin:0;"><i class="fas fa-info-circle" style="color:var(--main-red); margin-right:6px;"></i>PIN 6 ຕົວໃຊ້ສຳລັບຢືນຢັນຕົວຕົນຕອນລືມລະຫັດຜ່ານ</p>
+        </div>
+        
+        <div class="bank-card">
+            <div style="position:relative; margin-bottom:12px;">
+                <input type="password" id="current-pin" class="form-control" placeholder="PIN ປັດຈຸບັນ (6 ຕົວ)" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="padding-right:46px; letter-spacing:4px;">
+                <button type="button" onclick="togglePw('current-pin', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+            <div style="position:relative; margin-bottom:12px;">
+                <input type="password" id="new-pin" class="form-control" placeholder="PIN ໃໝ່ (6 ຕົວ)" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="padding-right:46px; letter-spacing:4px;">
+                <button type="button" onclick="togglePw('new-pin', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+            <div style="position:relative; margin-bottom:15px;">
+                <input type="password" id="confirm-pin" class="form-control" placeholder="ຢືນຢັນ PIN ໃໝ່" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="padding-right:46px; letter-spacing:4px;">
+                <button type="button" onclick="togglePw('confirm-pin', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
+            </div>
+            
+            <button class="btn btn-red" style="width:100%; padding:15px;" onclick="app.changePin()">
+                <i class="fas fa-save"></i> ບັນທຶກ PIN ໃໝ່
             </button>
         </div>
     </main>
@@ -1090,7 +1133,7 @@
         </div>
     </main>
 
-    <!-- User Profile Modal -->
+    <!-- User Profile Modal (kept for backward compat from menu) -->
     <div id="user-profile-modal" class="modal-overlay">
         <div class="modal-content" style="max-width:500px;">
             <button onclick="app.closeModal('user-profile-modal')" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#fff; font-size:24px; cursor:pointer;">✕</button>
@@ -1123,6 +1166,53 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== ໜ້າໂປຣໄຟລ໌ (Profile Page) ===== -->
+    <main id="view-profile" class="page-view container hidden" style="padding-top:15px; padding-bottom:80px;">
+        <button class="btn btn-outline btn-sm" onclick="router.back()" style="margin-bottom:15px;"><i class="fas fa-arrow-left"></i> ກັບຄືນ</button>
+
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="position:relative; display:inline-block; margin-bottom:12px;">
+                <img id="page-profile-avatar" src="" style="width:90px; height:90px; border-radius:50%; border:3px solid var(--main-red); display:block; object-fit:cover;">
+                <button onclick="app.showChangeAvatarPopup()" style="position:absolute; bottom:0; right:0; width:28px; height:28px; border-radius:50%; background:var(--main-red); border:2px solid #000; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff;">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+            <h2 id="page-profile-username" style="margin:0; font-size:20px;">Username</h2>
+            <p id="page-profile-status" style="color:#999; font-size:13px; margin:5px 0;">ສະຖານະ: ປົກກະຕິ</p>
+        </div>
+
+        <div class="user-stats" style="margin-bottom:15px;">
+            <div class="stat-box">
+                <div class="stat-value" id="page-profile-balance" style="color:var(--main-red);">0 ₭</div>
+                <div class="stat-label">ຍອດຄົງເຫຼືອ</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="page-profile-spent">0 ₭</div>
+                <div class="stat-label">ໃຊ້ໄປທັງໝົດ</div>
+            </div>
+        </div>
+
+        <div style="background:#111; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #222;">
+            <p style="font-size:13px; color:#999; margin:6px 0;">📅 ສະໝັກເມື່ອ: <span id="page-profile-created" style="color:#fff;"></span></p>
+            <p style="font-size:13px; color:#999; margin:6px 0;">🕐 ເຂົ້າສູ່ລະບົບລ່າສຸດ: <span id="page-profile-lastlogin" style="color:#fff;"></span></p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openChangePassword()">
+                <i class="fas fa-key" style="margin-right:10px; color:var(--main-red);"></i> ປ່ຽນລະຫັດຜ່ານ
+            </button>
+            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openChangePinPage()">
+                <i class="fas fa-lock" style="margin-right:10px; color:var(--main-red);"></i> ປ່ຽນ PIN 6 ຕົວ
+            </button>
+            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openOrderHistory()">
+                <i class="fas fa-history" style="margin-right:10px; color:var(--main-red);"></i> ປະຫວັດການສັ່ງຊື້
+            </button>
+            <button class="btn btn-red" style="width:100%; padding:14px;" onclick="app.userLogout()">
+                <i class="fas fa-sign-out-alt" style="margin-right:10px;"></i> ອອກຈາກລະບົບ
+            </button>
+        </div>
+    </main>
 
 
     <!-- ===== Change Avatar Modal ===== -->

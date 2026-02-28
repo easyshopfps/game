@@ -2889,6 +2889,76 @@ function togglePw(id, btn) {
                 router.back();
             },
 
+            navProfile: function() {
+                if(!currentUser) {
+                    this.openUserAuth();
+                    return;
+                }
+                this._fillProfilePage();
+                router.show('view-profile');
+                this.setActiveNav('profile');
+            },
+
+            _fillProfilePage: function() {
+                if(!currentUser) return;
+                // Fill page elements
+                const pa = document.getElementById('page-profile-avatar');
+                if(pa) pa.src = currentUser.avatar_url || '';
+                const pu = document.getElementById('page-profile-username');
+                if(pu) pu.textContent = currentUser.username;
+                const ps = document.getElementById('page-profile-status');
+                if(ps) ps.textContent = currentUser.status === 'active' ? 'ສະຖານະ: ປົກກະຕິ' : 'ສະຖານະ: ຖືກລະງັບ';
+                const pb = document.getElementById('page-profile-balance');
+                if(pb) pb.textContent = Number(currentUser.balance || 0).toLocaleString() + ' ₭';
+                const psp = document.getElementById('page-profile-spent');
+                if(psp) psp.textContent = Number(currentUser.total_spent || 0).toLocaleString() + ' ₭';
+                const pc = document.getElementById('page-profile-created');
+                if(pc) pc.textContent = new Date(currentUser.created_at).toLocaleDateString('lo-LA');
+                const pl = document.getElementById('page-profile-lastlogin');
+                if(pl) pl.textContent = currentUser.last_login ? new Date(currentUser.last_login).toLocaleString('lo-LA') : '-';
+            },
+
+            openOrderHistory: function() {
+                router.show('view-order-history');
+                this.renderOrderHistory();
+            },
+
+            openChangePinPage: function() {
+                if(!currentUser) { NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບ'); return; }
+                router.show('view-change-pin');
+            },
+
+            changePin: async function() {
+                const currentPin = document.getElementById('current-pin').value.trim();
+                const newPin = document.getElementById('new-pin').value.trim();
+                const confirmPin = document.getElementById('confirm-pin').value.trim();
+
+                if(!currentPin || !newPin || !confirmPin) { NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ'); return; }
+                if(newPin !== confirmPin) { NotificationManager.error('PIN ໃໝ່ບໍ່ຕົງກັນ'); return; }
+                if(newPin.length !== 6 || !/^\d{6}$/.test(newPin)) { NotificationManager.error('PIN ຕ້ອງເປັນຕົວເລກ 6 ຕົວ'); return; }
+                if(String(currentUser.pin) !== String(currentPin)) { NotificationManager.error('PIN ປັດຈຸບັນບໍ່ຖືກ'); return; }
+
+                showProcessing('ກຳລັງປ່ຽນ PIN...');
+                const { error } = await _supabase.from('site_users').update({ pin: newPin }).eq('id', currentUser.id);
+                hideProcessing();
+                if(error) { NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + error.message); return; }
+                currentUser.pin = newPin;
+                NotificationManager.success('ປ່ຽນ PIN ສຳເລັດ!');
+                document.getElementById('current-pin').value = '';
+                document.getElementById('new-pin').value = '';
+                document.getElementById('confirm-pin').value = '';
+                router.back();
+            },
+
+            openForgotFromProfile: function() {
+                router.show('view-login');
+                ['register-form','reset-form'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('forgot-form').style.display = 'block';
+                document.getElementById('forgot-username').value = '';
+                document.getElementById('forgot-pin').value = '';
+            },
+
             openUserProfile: async function() {
                 if(!currentUser) return;
                 
