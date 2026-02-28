@@ -3570,7 +3570,7 @@ function togglePw(id, btn) {
                 mode = mode || 'ticket';
                 if(this.isSpinning) return;
                 if(!currentUser) { NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບ'); return; }
-                if(!this.prizes || this.prizes.length === 0) { NotificationManager.warning('ຍັງບໍ່ມີລາງວັນ'); return; }
+                if(!this.prizes || this.prizes.length === 0) return; // ไม่มีรางวัล = ไม่ทำอะไร ไม่แจ้งเตือน
 
                 showProcessing('ກຳລັງກວດສອບ...');
                 const { data: liveUser } = await _supabase.from('site_users').select('spin_tickets,balance').eq('id', currentUser.id).single();
@@ -3625,31 +3625,39 @@ function togglePw(id, btn) {
                 const start = performance.now();
                 const startAngle = this.currentAngle;
 
-                // เสียงหมุน — Web Audio API (ไม่ต้องโหลดไฟล์)
+                // เสียงหมุน — เสียง tick ต่อเนื่องช้าลงตามวงล้อ
                 let tickStopped = false;
                 let tickTimeoutId = null;
                 try {
                     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    let tickCount = 0;
-                    const maxTicks = Math.floor(spins * n * 1.5);
-                    function doTick() {
-                        if(tickStopped || tickCount >= maxTicks) return;
+                    const spinDuration = duration; // ms เดียวกับ animation
+                    const startDelay = 35; // ms ระหว่าง tick แรก (เร็ว)
+                    const endDelay = 260;  // ms ระหว่าง tick สุดท้าย (ช้า)
+
+                    function playTick() {
+                        if(tickStopped) return;
                         try {
                             const osc = audioCtx.createOscillator();
                             const gain = audioCtx.createGain();
-                            osc.connect(gain); gain.connect(audioCtx.destination);
-                            osc.frequency.value = 580 + Math.random() * 180;
-                            osc.type = 'triangle';
-                            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.055);
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.value = 900;
+                            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
                             osc.start(audioCtx.currentTime);
-                            osc.stop(audioCtx.currentTime + 0.055);
-                        } catch(e2) {}
-                        tickCount++;
-                        const nextDelay = Math.min(28 + tickCount * 2.8, 230);
-                        tickTimeoutId = setTimeout(doTick, nextDelay);
+                            osc.stop(audioCtx.currentTime + 0.07);
+                        } catch(e) {}
+
+                        // คำนวณ delay ถัดไปตาม easing เดียวกับวงล้อ
+                        const elapsed = performance.now() - start;
+                        const t = Math.min(elapsed / spinDuration, 1);
+                        // ease-out: เร็วช่วงต้น ช้าช่วงท้าย
+                        const eased = 1 - Math.pow(1 - t, 3);
+                        const delay = startDelay + (endDelay - startDelay) * eased;
+                        tickTimeoutId = setTimeout(playTick, delay);
                     }
-                    tickTimeoutId = setTimeout(doTick, 28);
+                    tickTimeoutId = setTimeout(playTick, startDelay);
                 } catch(e) { /* audio not supported */ }
 
                 const animate = (now) => {
