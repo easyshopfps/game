@@ -135,7 +135,7 @@
                 </div>
                 <i class="fas fa-headset nav-icon" onclick="app.openContact()"></i>
                 <!-- User Avatar -->
-                <img id="user-avatar" class="user-avatar" src="https://img5.pic.in.th/file/secure-sv1/17710495907562b12906e5c4d2a54.png" alt="User" onclick="app.toggleUserMenu()" style="display:none;">
+                <img id="user-avatar" class="user-avatar" src="https://img5.pic.in.th/file/secure-sv1/17710495907562b12906e5c4d2a54.png" alt="User" onclick="app.navProfile()" style="display:none;">
                 <div class="icon-btn" onclick="app.openUserAuth()" id="login-btn" style="display:flex;">
                     <i class="fas fa-user-circle nav-icon"></i>
                 </div>
@@ -453,13 +453,13 @@
 
     <!-- ===== Popup ເບິ່ງຂໍ້ມູນການສັ່ງຊື້ ===== -->
     <div id="order-detail-modal" class="modal-overlay hidden" onclick="if(event.target===this)app.closeModal('order-detail-modal')">
-        <div class="modal-box" style="max-width:360px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="color:var(--main-red);">ຂໍ້ມູນການສັ່ງຊື້</h3>
-                <i class="fas fa-times" onclick="app.closeModal('order-detail-modal')" style="cursor:pointer; color:#aaa;"></i>
+        <div class="modal-box" style="max-width:340px; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="color:var(--main-red); font-size:16px; margin:0;">ຂໍ້ມູນການສັ່ງຊື້</h3>
+                <i class="fas fa-times" onclick="app.closeModal('order-detail-modal')" style="cursor:pointer; color:#aaa; font-size:18px;"></i>
             </div>
             <div id="order-detail-content"></div>
-            <div style="display:flex; gap:8px; margin-top:15px;">
+            <div style="display:flex; gap:8px; margin-top:12px;">
                 <button id="order-tutorial-btn" class="btn btn-outline btn-sm" style="flex:1; display:none;" onclick="app.openOrderTutorial()">
                     <i class="fas fa-play-circle"></i> ກົດເພື່ອດູວິທີລົງ
                 </button>
@@ -1064,7 +1064,7 @@
                     <button type="button" class="pw-eye" onclick="togglePw('login-password',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
                 </div>
                 <div style="text-align:right; margin-bottom:14px; margin-top:-8px;">
-                    <a onclick="app.showForgotPassword()" style="color:#aaa; font-size:12px; cursor:pointer;">ລືມລະຫັດຜ່ານ?</a>
+                    <a onclick="app.openForgotPage()" style="color:#aaa; font-size:12px; cursor:pointer;">ລືມລະຫັດຜ່ານ?</a>
                 </div>
                 <div class="cf-turnstile-wrap">
                     <div class="cf-turnstile" data-sitekey="0x4AAAAAACjo1dZQZ-oTFMJG" data-theme="dark" id="cf-login"></div>
@@ -1094,6 +1094,46 @@
                 </div>
                 <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.doResetPassword()">ບັນທຶກລະຫັດໃໝ່</button>
             </div>
+        </div>
+    </main>
+
+    <!-- ===== ໜ້າລືມລະຫັດຜ່ານ (Standalone) ===== -->
+    <main id="view-forgot" class="page-view container hidden" style="padding-top:40px; padding-bottom:40px;">
+        <div class="auth-page-card">
+            <div class="auth-page-logo">
+                <img src="https://img5.pic.in.th/file/secure-sv1/1771049590756.png" alt="Eazy SHOP">
+                <div>
+                    <h2 style="margin:0; font-size:22px;">ລືມລະຫັດຜ່ານ</h2>
+                    <p style="margin:2px 0 0; font-size:12px; color:#aaa;">Reset Password</p>
+                </div>
+            </div>
+            <p style="color:#aaa; font-size:13px; margin-bottom:16px; text-align:center;">ໃສ່ຊື່ຜູ້ໃຊ້ ແລະ PIN 6 ຫຼັກທີ່ຕັ້ງໄວ້ຕອນສະໝັກ</p>
+            <input type="text" id="forgot2-username" class="auth-input" placeholder="ຊື່ຜູ້ໃຊ້">
+            <input type="text" id="forgot2-pin" class="auth-input" placeholder="PIN 6 ຫຼັກ" maxlength="6" inputmode="numeric">
+            <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.verifyForgotPin2()">ສົ່ງຂໍ້ມູນ</button>
+            <div class="auth-toggle"><a onclick="router.back()" style="cursor:pointer;">← ກັບໄປ</a></div>
+        </div>
+    </main>
+
+    <!-- ===== ໜ້າຕັ້ງລະຫັດໃໝ່ (Standalone) ===== -->
+    <main id="view-reset" class="page-view container hidden" style="padding-top:40px; padding-bottom:40px;">
+        <div class="auth-page-card">
+            <div class="auth-page-logo">
+                <img src="https://img5.pic.in.th/file/secure-sv1/1771049590756.png" alt="Eazy SHOP">
+                <div>
+                    <h2 style="margin:0; font-size:22px;">ຕັ້ງລະຫັດໃໝ່</h2>
+                    <p style="margin:2px 0 0; font-size:12px; color:#aaa;">New Password</p>
+                </div>
+            </div>
+            <div class="pw-wrap">
+                <input type="password" id="reset2-password" class="auth-input" placeholder="ລະຫັດຜ່ານໃໝ່">
+                <button type="button" class="pw-eye" onclick="togglePw('reset2-password',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
+            </div>
+            <div class="pw-wrap">
+                <input type="password" id="reset2-confirm" class="auth-input" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່">
+                <button type="button" class="pw-eye" onclick="togglePw('reset2-confirm',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
+            </div>
+            <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.doResetPassword2()">ບັນທຶກລະຫັດໃໝ່</button>
         </div>
     </main>
 
@@ -1198,20 +1238,27 @@
             <p style="font-size:13px; color:#999; margin:6px 0;">🕐 ເຂົ້າສູ່ລະບົບລ່າສຸດ: <span id="page-profile-lastlogin" style="color:#fff;"></span></p>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openChangePassword()">
-                <i class="fas fa-key" style="margin-right:10px; color:var(--main-red);"></i> ປ່ຽນລະຫັດຜ່ານ
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+            <button class="btn btn-outline" style="padding:16px 10px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="app.openChangePassword()">
+                <i class="fas fa-key" style="font-size:20px; color:var(--main-red);"></i>
+                <span style="font-size:13px;">ປ່ຽນລະຫັດຜ່ານ</span>
             </button>
-            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openChangePinPage()">
-                <i class="fas fa-lock" style="margin-right:10px; color:var(--main-red);"></i> ປ່ຽນ PIN 6 ຕົວ
+            <button class="btn btn-outline" style="padding:16px 10px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="app.openChangePinPage()">
+                <i class="fas fa-lock" style="font-size:20px; color:var(--main-red);"></i>
+                <span style="font-size:13px;">ປ່ຽນ PIN 6 ຕົວ</span>
             </button>
-            <button class="btn btn-outline" style="width:100%; padding:14px; text-align:left;" onclick="app.openOrderHistory()">
-                <i class="fas fa-history" style="margin-right:10px; color:var(--main-red);"></i> ປະຫວັດການສັ່ງຊື້
+            <button class="btn btn-outline" style="padding:16px 10px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="app.openOrderHistory()">
+                <i class="fas fa-history" style="font-size:20px; color:var(--main-red);"></i>
+                <span style="font-size:13px;">ປະຫວັດການສັ່ງຊື້</span>
             </button>
-            <button class="btn btn-red" style="width:100%; padding:14px;" onclick="app.userLogout()">
-                <i class="fas fa-sign-out-alt" style="margin-right:10px;"></i> ອອກຈາກລະບົບ
+            <button class="btn btn-outline" style="padding:16px 10px; display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="router.show('view-topup')">
+                <i class="fas fa-coins" style="font-size:20px; color:var(--main-red);"></i>
+                <span style="font-size:13px;">ເຕີມເງິນ</span>
             </button>
         </div>
+        <button class="btn btn-red" style="width:100%; padding:14px;" onclick="app.userLogout()">
+            <i class="fas fa-sign-out-alt" style="margin-right:10px;"></i> ອອກຈາກລະບົບ
+        </button>
     </main>
 
 

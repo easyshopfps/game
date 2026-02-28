@@ -1098,12 +1098,12 @@ function togglePw(id, btn) {
                     : `<b style="color:var(--main-red);">${Number(order.total_amount || order.product_price || 0).toLocaleString()} ₭</b>`;
 
                 document.getElementById('order-detail-content').innerHTML = `
-                    <div style="text-align:center; margin-bottom:12px;">
-                        <img src="${order.product_img || ''}" style="width:100px; height:100px; object-fit:cover; border-radius:10px;">
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <img src="${order.product_img || ''}" style="width:72px; height:72px; object-fit:cover; border-radius:8px;">
                     </div>
-                    <div style="background:#111; padding:12px; border-radius:10px; font-size:13px;">
-                        <div style="margin-bottom:8px;"><span style="color:#aaa;">ສິນຄ້າ:</span> <b>${order.product_name || '-'}</b></div>
-                        <div style="margin-bottom:8px;"><span style="color:#aaa;">ລາຄາ:</span> ${priceHtml}</div>
+                    <div style="background:#111; padding:10px 12px; border-radius:10px; font-size:13px;">
+                        <div style="margin-bottom:6px;"><span style="color:#aaa;">ສິນຄ້າ:</span> <b>${order.product_name || '-'}</b></div>
+                        <div style="margin-bottom:6px;"><span style="color:#aaa;">ລາຄາ:</span> ${priceHtml}</div>
                         <div><span style="color:#aaa;">ເວລາສັ່ງຊື້:</span> ${dateStr}</div>
                     </div>
                     ${order.product_unique_id ? `
@@ -2950,13 +2950,52 @@ function togglePw(id, btn) {
                 router.back();
             },
 
+            openForgotPage: function() {
+                document.getElementById('forgot2-username').value = '';
+                document.getElementById('forgot2-pin').value = '';
+                router.show('view-forgot');
+            },
+
             openForgotFromProfile: function() {
-                router.show('view-login');
-                ['register-form','reset-form'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
-                document.getElementById('login-form').style.display = 'none';
-                document.getElementById('forgot-form').style.display = 'block';
-                document.getElementById('forgot-username').value = '';
-                document.getElementById('forgot-pin').value = '';
+                document.getElementById('forgot2-username').value = '';
+                document.getElementById('forgot2-pin').value = '';
+                router.show('view-forgot');
+            },
+
+            verifyForgotPin2: async function() {
+                const username = document.getElementById('forgot2-username').value.trim();
+                const pin = document.getElementById('forgot2-pin').value.trim();
+                if(!username || !pin) { NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ'); return; }
+                showProcessing('ກຳລັງຕິດຕໍ່...');
+                try {
+                    const { data } = await _supabase.from('site_users').select('id,pin').eq('username', username).maybeSingle();
+                    hideProcessing();
+                    if(!data) { NotificationManager.error('ບໍ່ພົບຊື່ຜູ້ໃຊ້ນີ້'); return; }
+                    if(String(data.pin) !== String(pin)) { NotificationManager.error('PIN ບໍ່ຖືກຕ້ອງ'); return; }
+                    this._forgotUserId = data.id;
+                    document.getElementById('reset2-password').value = '';
+                    document.getElementById('reset2-confirm').value = '';
+                    router.show('view-reset');
+                } catch(e) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); }
+            },
+
+            doResetPassword2: async function() {
+                const pw = document.getElementById('reset2-password').value;
+                const cf = document.getElementById('reset2-confirm').value;
+                if(!pw || !cf) { NotificationManager.warning('ກະລຸນາກອກລະຫັດຜ່ານ'); return; }
+                if(pw !== cf) { NotificationManager.error('ລະຫັດຜ່ານບໍ່ຕົງກັນ'); return; }
+                if(pw.length < 6) { NotificationManager.error('ລະຫັດຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'); return; }
+                showProcessing('ກຳລັງບັນທຶກ...');
+                try {
+                    const { error } = await _supabase.from('site_users').update({ password: pw }).eq('id', this._forgotUserId);
+                    hideProcessing();
+                    if(error) throw error;
+                    NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
+                    this._forgotUserId = null;
+                    router.show('view-login');
+                    ['forgot-form','reset-form'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+                    document.getElementById('login-form').style.display = 'block';
+                } catch(e) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); }
             },
 
             openUserProfile: async function() {
