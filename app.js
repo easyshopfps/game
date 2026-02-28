@@ -3626,30 +3626,30 @@ function togglePw(id, btn) {
                 const startAngle = this.currentAngle;
 
                 // เสียงหมุน — Web Audio API (ไม่ต้องโหลดไฟล์)
-                let tickInterval = null;
+                let tickStopped = false;
+                let tickTimeoutId = null;
                 try {
                     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     let tickCount = 0;
-                    const maxTicks = Math.floor(spins * n * 1.2);
-                    tickInterval = setInterval(() => {
-                        if(tickCount >= maxTicks) { clearInterval(tickInterval); return; }
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.frequency.value = 600 + Math.random() * 200;
-                        osc.type = 'triangle';
-                        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
-                        osc.start(audioCtx.currentTime);
-                        osc.stop(audioCtx.currentTime + 0.06);
+                    const maxTicks = Math.floor(spins * n * 1.5);
+                    function doTick() {
+                        if(tickStopped || tickCount >= maxTicks) return;
+                        try {
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+                            osc.connect(gain); gain.connect(audioCtx.destination);
+                            osc.frequency.value = 580 + Math.random() * 180;
+                            osc.type = 'triangle';
+                            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.055);
+                            osc.start(audioCtx.currentTime);
+                            osc.stop(audioCtx.currentTime + 0.055);
+                        } catch(e2) {}
                         tickCount++;
-                        // ทำให้ tick ช้าลงเรื่อยๆ
-                        clearInterval(tickInterval);
-                        const nextDelay = Math.min(30 + tickCount * 2.5, 220);
-                        if(tickCount < maxTicks) {
-                            tickInterval = setInterval(arguments.callee, nextDelay);
-                        }
-                    }, 30);
+                        const nextDelay = Math.min(28 + tickCount * 2.8, 230);
+                        tickTimeoutId = setTimeout(doTick, nextDelay);
+                    }
+                    tickTimeoutId = setTimeout(doTick, 28);
                 } catch(e) { /* audio not supported */ }
 
                 const animate = (now) => {
@@ -3663,7 +3663,8 @@ function togglePw(id, btn) {
                     } else {
                         this.currentAngle = finalAngle;
                         this.draw();
-                        if(tickInterval) clearInterval(tickInterval);
+                        tickStopped = true;
+                        if(tickTimeoutId) clearTimeout(tickTimeoutId);
                         this.onSpinEnd(prize, newTickets);
                     }
                 };
@@ -4275,6 +4276,35 @@ function togglePw(id, btn) {
                 thumb.style.left = isOn ? '21px' : '3px';
             }
         };
+
+        // sync สวิตช์ทุกครั้งที่เปิดเมนู
+        app._syncSnowSwitch = function() {
+            const isOn = typeof window._snowEnabled === 'function' ? window._snowEnabled() : true;
+            const sw = document.getElementById('snow-toggle-switch');
+            const thumb = document.getElementById('snow-toggle-thumb');
+            if(sw && thumb) {
+                sw.style.background = isOn ? '#e53935' : '#555';
+                thumb.style.left = isOn ? '21px' : '3px';
+            }
+        };
+
+        // hook เข้า toggleMenu เดิม
+        const _origToggleMenu = app.toggleMenu ? app.toggleMenu.bind(app) : null;
+        const _origOpenMenu = document.getElementById('user-menu');
+        if(_origOpenMenu) {
+            const _origStyle = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, 'display');
+        }
+        // ง่ายกว่า: MutationObserver ดูการเปิด user-menu
+        (function() {
+            const menu = document.getElementById('user-menu');
+            if(!menu) return;
+            const obs = new MutationObserver(() => {
+                if(menu.style.display !== 'none' && menu.style.display !== '') {
+                    app._syncSnowSwitch && app._syncSnowSwitch();
+                }
+            });
+            obs.observe(menu, { attributes: true, attributeFilter: ['style'] });
+        })();
 
         // ===== CUSTOM CONFIRM DIALOG =====
         const CustomConfirm = {

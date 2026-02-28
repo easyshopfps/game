@@ -1427,7 +1427,15 @@
         const canvas = document.getElementById('snow-canvas');
         const ctx = canvas.getContext('2d');
         let W, H, flakes = [];
+
+        // จำสถานะ: ถ้าเคยปิดไว้ (sessionStorage จะ reset เมื่อ refresh แต่ไม่ reset เมื่อเปิด tab ใหม่)
+        // ใช้ localStorage + flag ว่า refresh แล้วหรือยัง
         let snowEnabled = true;
+        try {
+            const saved = localStorage.getItem('ezshop_snow');
+            if(saved === 'off') snowEnabled = false;
+        } catch(e) {}
+
         let animId = null;
 
         function resize() {
@@ -1474,28 +1482,41 @@
                 f.x += f.wind;
                 f.angle += f.spin;
 
-                if(f.y > H + 20) {
-                    f.y = -20;
-                    f.x = Math.random() * W;
-                }
+                if(f.y > H + 20) { f.y = -20; f.x = Math.random() * W; }
                 if(f.x > W + 20) f.x = -20;
                 if(f.x < -20) f.x = W + 20;
             });
             animId = requestAnimationFrame(draw);
         }
-        animId = requestAnimationFrame(draw);
+
+        // เริ่ม animation ตามสถานะที่บันทึกไว้
+        if(snowEnabled) { animId = requestAnimationFrame(draw); }
+        else { canvas.style.display = 'none'; }
 
         // Expose toggle function globally
         window._snowToggle = function() {
             snowEnabled = !snowEnabled;
+            try { localStorage.setItem('ezshop_snow', snowEnabled ? 'on' : 'off'); } catch(e) {}
             if(snowEnabled) {
+                canvas.style.display = '';
                 animId = requestAnimationFrame(draw);
             } else {
                 ctx.clearRect(0, 0, W, H);
+                canvas.style.display = 'none';
             }
             return snowEnabled;
         };
         window._snowEnabled = () => snowEnabled;
+
+        // sync UI switch หลัง DOM โหลดเสร็จ
+        document.addEventListener('DOMContentLoaded', function() {
+            if(!snowEnabled) {
+                const sw = document.getElementById('snow-toggle-switch');
+                const thumb = document.getElementById('snow-toggle-thumb');
+                if(sw) sw.style.background = '#555';
+                if(thumb) thumb.style.left = '3px';
+            }
+        });
     })();
     </script>
 
