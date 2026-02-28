@@ -3625,39 +3625,35 @@ function togglePw(id, btn) {
                 const start = performance.now();
                 const startAngle = this.currentAngle;
 
-                // เสียงหมุน — เสียง tick ต่อเนื่องช้าลงตามวงล้อ
+                // เสียงหมุน — Style B: Tick นุ่มๆ คล้ายนาฬิกา
                 let tickStopped = false;
                 let tickTimeoutId = null;
                 try {
                     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    const spinDuration = duration; // ms เดียวกับ animation
-                    const startDelay = 35; // ms ระหว่าง tick แรก (เร็ว)
-                    const endDelay = 260;  // ms ระหว่าง tick สุดท้าย (ช้า)
+                    const spinDuration = duration;
 
                     function playTick() {
                         if(tickStopped) return;
                         try {
                             const osc = audioCtx.createOscillator();
                             const gain = audioCtx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.value = 1050;
                             osc.connect(gain);
                             gain.connect(audioCtx.destination);
-                            osc.type = 'sine';
-                            osc.frequency.value = 900;
-                            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
-                            osc.start(audioCtx.currentTime);
-                            osc.stop(audioCtx.currentTime + 0.07);
+                            const now = audioCtx.currentTime;
+                            gain.gain.setValueAtTime(0, now);
+                            gain.gain.linearRampToValueAtTime(0.28, now + 0.004); // soft attack
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055); // quick decay
+                            osc.start(now);
+                            osc.stop(now + 0.055);
                         } catch(e) {}
 
-                        // คำนวณ delay ถัดไปตาม easing เดียวกับวงล้อ
-                        const elapsed = performance.now() - start;
-                        const t = Math.min(elapsed / spinDuration, 1);
-                        // ease-out: เร็วช่วงต้น ช้าช่วงท้าย
-                        const eased = 1 - Math.pow(1 - t, 3);
-                        const delay = startDelay + (endDelay - startDelay) * eased;
-                        tickTimeoutId = setTimeout(playTick, delay);
+                        const t = Math.min((performance.now() - start) / spinDuration, 1);
+                        const delay = 35 + (290 - 35) * Math.pow(t, 1.7);
+                        if(t < 1) tickTimeoutId = setTimeout(playTick, delay);
                     }
-                    tickTimeoutId = setTimeout(playTick, startDelay);
+                    tickTimeoutId = setTimeout(playTick, 35);
                 } catch(e) { /* audio not supported */ }
 
                 const animate = (now) => {
