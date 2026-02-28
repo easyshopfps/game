@@ -923,7 +923,20 @@ function togglePw(id, btn) {
                 // อัปเดต balance ใน currentUser
                 currentUser.balance = newBalance;
                 this.updateUserUI();
+
+                // ===== UPDATE LOCAL CACHE ทันที (ไม่รอ fetchData) =====
+                // อัปเดต stock ใน db.products cache ทันทีเลย
+                if(newStock !== null) {
+                    const cachedProd = this.db.products.find(p => p.id === liveProduct.id);
+                    if(cachedProd) cachedProd.stock = newStock;
+                }
+                
+                // Re-render หน้า home แบบ silent (ถ้า home ถูกโหลดอยู่ใน DOM)
+                // เพื่อให้ stock card อัปเดตทันทีโดยไม่ต้องรีเฟรช
+                this._silentRefreshHomeStock(liveProduct.id, newStock);
+
                 await this.fetchData();
+                
                 
                 // ===== UPDATE DETAIL PAGE STOCK UI REAL-TIME (ไม่ต้อง reload) =====
                 if(newStock !== null) {
@@ -991,6 +1004,52 @@ function togglePw(id, btn) {
                         buyBtn.style.cursor = 'pointer';
                     }
                 }
+            },
+
+            // ===== อัปเดต stock card บนหน้า home ทันทีโดยไม่ต้อง re-render ทั้งหน้า =====
+            _silentRefreshHomeStock: function(productId, newStock) {
+                // หา prod-card ทั้งหมดใน home-prods และ list-prods
+                ['home-prods', 'list-prods'].forEach(containerId => {
+                    const container = document.getElementById(containerId);
+                    if(!container) return;
+                    // หา card ที่ตรงกับ productId โดยดูจาก onclick attribute
+                    const cards = container.querySelectorAll('.prod-card');
+                    cards.forEach(card => {
+                        const onclick = card.getAttribute('onclick') || '';
+                        if(onclick.includes('router.detail(' + productId + ')')) {
+                            // อัปเดต stock info ใน card นี้
+                            const stockDiv = card.querySelector('.stock-info');
+                            const buyBtn = card.querySelector('.btn-buy-card');
+                            if(newStock !== null) {
+                                if(newStock <= 0) {
+                                    // หมดสต็อก
+                                    card.classList.add('out-of-stock-card');
+                                    if(buyBtn) {
+                                        buyBtn.disabled = true;
+                                        buyBtn.innerHTML = 'ສິນຄ້າໝົດແລ້ວ';
+                                        buyBtn.style.opacity = '0.6';
+                                    }
+                                    if(stockDiv) {
+                                        stockDiv.className = 'stock-info out-of-stock';
+                                        stockDiv.innerHTML = '<span class="stock-icon-wrap"><i class="fas fa-box"></i><i class="fas fa-times stock-badge-x"></i></span> ສິນຄ້າໝົດແລ້ວ';
+                                    }
+                                } else if(newStock <= 5) {
+                                    // เหลือน้อย
+                                    if(stockDiv) {
+                                        stockDiv.className = 'stock-info low-stock';
+                                        stockDiv.innerHTML = `<span class="stock-icon-wrap"><i class="fas fa-box"></i><i class="fas fa-check stock-badge-check"></i></span> ຄົງເຫຼືອ ${newStock} ອັນ`;
+                                    }
+                                } else {
+                                    // ยังมีสต็อก
+                                    if(stockDiv) {
+                                        stockDiv.className = 'stock-info';
+                                        stockDiv.innerHTML = `<span class="stock-icon-wrap"><i class="fas fa-box"></i><i class="fas fa-check stock-badge-check"></i></span> ຄົງເຫຼືອ ${newStock} ອັນ`;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
             },
 
             openTutorial: function() {
