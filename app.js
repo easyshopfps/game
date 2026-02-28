@@ -2527,9 +2527,76 @@ function togglePw(id, btn) {
                 } catch(e) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); }
             },
 
+            checkPwStrengthChange: function(pw) {
+                this._pwStrength(pw, 'change-strength-fill', 'change-strength-hint');
+            },
+            checkPwStrengthReg: function(pw) {
+                this._pwStrength(pw, 'reg-strength-fill', 'reg-strength-hint');
+            },
+            checkPwStrengthReset: function(pw) {
+                this._pwStrength(pw, 'reset-strength-fill', 'reset-strength-hint');
+            },
+            _pwStrength: function(pw, fillId, hintId) {
+                const fill = document.getElementById(fillId);
+                const hint = document.getElementById(hintId);
+                if(!fill || !hint) return;
+                const checks = {
+                    upper: /[A-Z]/.test(pw),
+                    lower: /[a-z]/.test(pw),
+                    num: /[0-9]/.test(pw),
+                    special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pw),
+                    long: pw.length >= 8
+                };
+                const score = Object.values(checks).filter(Boolean).length;
+                const colors = ['#ff2222','#ff6622','#ffaa00','#88dd00','#00ff88'];
+                const widths = ['20%','40%','60%','80%','100%'];
+                fill.style.background = score > 0 ? colors[score-1] : '#333';
+                fill.style.width = score > 0 ? widths[score-1] : '0%';
+                let missing = [];
+                if(!checks.upper) missing.push('ຕົວພິມໃຫຍ່ A-Z');
+                if(!checks.lower) missing.push('ຕົວພິມນ້ອຍ a-z');
+                if(!checks.num) missing.push('ຕົວເລກ 0-9');
+                if(!checks.special) missing.push('ອັກຂະລະພິເສດ !@#$');
+                if(!checks.long) missing.push('ຢ່າງໜ້ອຍ 8 ຕົວ');
+                if(score >= 5) { hint.style.color='#00ff88'; hint.textContent='✓ ລະຫັດຜ່ານເຂັ້ມແຂງ'; }
+                else if(pw.length === 0) { hint.style.color='#aaa'; hint.textContent='ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)'; }
+                else { hint.style.color='#ffaa00'; hint.textContent='ຍັງຂາດ: ' + missing.join(', '); }
+            },
+
             checkPasswordStrength: function(pw) {
-                const fill = document.getElementById('strength-fill');
-                const hint = document.getElementById('strength-hint');
+                this._pwStrength(pw, 'change-strength-fill', 'change-strength-hint');
+            },
+
+            checkPasswordStrengthReg: function(pw) {
+                const fill = document.getElementById('reg-strength-fill');
+                const hint = document.getElementById('reg-strength-hint');
+                if(!fill) return;
+                const checks = {
+                    upper: /[A-Z]/.test(pw),
+                    lower: /[a-z]/.test(pw),
+                    num: /[0-9]/.test(pw),
+                    special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pw),
+                    long: pw.length >= 8
+                };
+                const score = Object.values(checks).filter(Boolean).length;
+                const colors = ['#ff2222','#ff6622','#ffaa00','#88dd00','#00ff88'];
+                const widths = ['20%','40%','60%','80%','100%'];
+                fill.style.background = score > 0 ? colors[score-1] : '#333';
+                fill.style.width = score > 0 ? widths[score-1] : '0%';
+                let missing = [];
+                if(!checks.upper) missing.push('ຕົວພິມໃຫຍ່ A-Z');
+                if(!checks.lower) missing.push('ຕົວພິມນ້ອຍ a-z');
+                if(!checks.num) missing.push('ຕົວເລກ 0-9');
+                if(!checks.special) missing.push('ອັກຂະລະພິເສດ !@#$');
+                if(!checks.long) missing.push('ຢ່າງໜ້ອຍ 8 ຕົວ');
+                if(score >= 5) { hint.style.color='#00ff88'; hint.textContent='✓ ລະຫັດຜ່ານເຂັ້ມແຂງ'; }
+                else if(pw.length === 0) { hint.style.color='#aaa'; hint.textContent='ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)'; }
+                else { hint.style.color='#ffaa00'; hint.textContent='ຍັງຂາດ: ' + missing.join(', '); }
+            },
+
+            checkPasswordStrengthReset: function(pw) {
+                const fill = document.getElementById('reset-strength-fill');
+                const hint = document.getElementById('reset-strength-hint');
                 if(!fill) return;
                 const checks = {
                     upper: /[A-Z]/.test(pw),
@@ -2975,22 +3042,25 @@ function togglePw(id, btn) {
             },
 
             openForgotPage: function() {
-                document.getElementById('forgot2-username').value = '';
+                const wrap = document.getElementById('forgot2-username-wrap');
+                if(wrap) wrap.style.display = currentUser ? 'none' : 'block';
                 document.getElementById('forgot2-pin').value = '';
+                if(!currentUser && document.getElementById('forgot2-username')) document.getElementById('forgot2-username').value = '';
                 router.show('view-forgot');
             },
 
             openForgotFromProfile: function() {
-                document.getElementById('forgot2-username').value = '';
+                const wrap = document.getElementById('forgot2-username-wrap');
+                if(wrap) wrap.style.display = 'none'; // login อยู่แล้ว ซ่อน username
                 document.getElementById('forgot2-pin').value = '';
                 router.show('view-forgot');
             },
 
             verifyForgotPin2: async function() {
-                const username = document.getElementById('forgot2-username').value.trim();
                 const pin = document.getElementById('forgot2-pin').value.trim();
+                const username = currentUser ? currentUser.username : document.getElementById('forgot2-username').value.trim();
                 if(!username || !pin) { NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ'); return; }
-                showProcessing('ກຳລັງຕິດຕໍ່...');
+                showProcessing('ກຳລັງກວດສອບ...');
                 try {
                     const { data } = await _supabase.from('site_users').select('id,pin').eq('username', username).maybeSingle();
                     hideProcessing();
@@ -2999,6 +3069,10 @@ function togglePw(id, btn) {
                     this._forgotUserId = data.id;
                     document.getElementById('reset2-password').value = '';
                     document.getElementById('reset2-confirm').value = '';
+                    const fill = document.getElementById('reset-strength-fill');
+                    const hint = document.getElementById('reset-strength-hint');
+                    if(fill) { fill.style.width='0%'; fill.style.background='#333'; }
+                    if(hint) { hint.style.color='#aaa'; hint.textContent='ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)'; }
                     router.show('view-reset');
                 } catch(e) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); }
             },
@@ -3008,7 +3082,25 @@ function togglePw(id, btn) {
                 const cf = document.getElementById('reset2-confirm').value;
                 if(!pw || !cf) { NotificationManager.warning('ກະລຸນາກອກລະຫັດຜ່ານ'); return; }
                 if(pw !== cf) { NotificationManager.error('ລະຫັດຜ່ານບໍ່ຕົງກັນ'); return; }
-                if(pw.length < 6) { NotificationManager.error('ລະຫັດຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'); return; }
+                // ກວດ strength
+                const checks = {
+                    upper: /[A-Z]/.test(pw),
+                    lower: /[a-z]/.test(pw),
+                    num: /[0-9]/.test(pw),
+                    special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pw),
+                    long: pw.length >= 8
+                };
+                const score = Object.values(checks).filter(Boolean).length;
+                if(score < 5) {
+                    let missing = [];
+                    if(!checks.upper) missing.push('ຕົວພິມໃຫຍ່ A-Z');
+                    if(!checks.lower) missing.push('ຕົວພິມນ້ອຍ a-z');
+                    if(!checks.num) missing.push('ຕົວເລກ 0-9');
+                    if(!checks.special) missing.push('ອັກຂະລະພິເສດ !@#$');
+                    if(!checks.long) missing.push('ຢ່າງໜ້ອຍ 8 ຕົວ');
+                    NotificationManager.error('ລະຫັດຜ່ານບໍ່ເຂັ້ມແຂງ! ຍັງຂາດ: ' + missing.join(', '));
+                    return;
+                }
                 showProcessing('ກຳລັງບັນທຶກ...');
                 try {
                     const { error } = await _supabase.from('site_users').update({ password: pw }).eq('id', this._forgotUserId);
@@ -3016,9 +3108,7 @@ function togglePw(id, btn) {
                     if(error) throw error;
                     NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
                     this._forgotUserId = null;
-                    router.show('view-login');
-                    ['forgot-form','reset-form'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
-                    document.getElementById('login-form').style.display = 'block';
+                    setTimeout(() => { location.reload(); }, 1500);
                 } catch(e) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); }
             },
 
@@ -3507,7 +3597,7 @@ function togglePw(id, btn) {
                 const prize = this.pickPrize();
                 if(!prize) { NotificationManager.error('ຜິດພາດ: ໄດ້ລາງວັນບໍ່ສຳເລັດ'); return; }
 
-                // หมุน animation — คำนวณ angle ให้วงล้อหยุดตรงช่องที่สุ่มได้จริงๆ
+                // หมุน animation — คำนวณ angle ให้วงล้อหยุดในช่องที่สุ่มได้ แต่ตำแหน่งสุ่ม (ไม่กึ่งกลาง)
                 this.isSpinning = true;
                 document.getElementById('spin-btn').disabled = true;
                 document.getElementById('spin-result-box').style.display = 'none';
@@ -3516,14 +3606,16 @@ function togglePw(id, btn) {
                 const prizeIdx = this.prizes.indexOf(prize);
                 const arc = (Math.PI * 2) / n;
 
-                // draw() วาดช่อง i ที่ start = arc*i - PI/2 (ctx ถูก rotate ด้วย currentAngle แล้ว)
-                // pointer อยู่บนสุด = angle 0 ของ canvas = -PI/2 ของวงล้อ
-                // เราต้องการให้กึ่งกลางช่อง prizeIdx อยู่ที่ angle -PI/2 (บนสุด)
-                // กึ่งกลางช่อง prizeIdx ใน local coords = arc*prizeIdx - PI/2 + arc/2
-                // ต้องการให้: currentAngle + (arc*prizeIdx - PI/2 + arc/2) = -PI/2
-                // => currentAngle = -arc*prizeIdx - arc/2
-                const targetLocalAngle = -(arc * prizeIdx + arc / 2);
-                // ปรับให้ currentAngle วิ่งไปข้างหน้าเสมอ (หมุนทวนเข็ม = angle เพิ่มขึ้น)
+                // สุ่ม offset ภายในช่องนั้น (ห่างจากขอบ 15% เพื่อไม่ชิดขอบเกินไป)
+                const edgeMargin = 0.15;
+                const randomOffset = (Math.random() * (1 - 2*edgeMargin) + edgeMargin) * arc;
+
+                // pointer อยู่บนสุด = -PI/2
+                // start ของช่อง prizeIdx = arc*prizeIdx - PI/2
+                // ต้องการให้จุดสุ่มในช่อง = start + randomOffset อยู่ที่ -PI/2 (pointer)
+                // => currentAngle + (arc*prizeIdx - PI/2 + randomOffset) = -PI/2
+                // => currentAngle = -arc*prizeIdx - randomOffset
+                const targetLocalAngle = -(arc * prizeIdx + randomOffset);
                 const spins = 6 + Math.floor(Math.random() * 4);
                 let diff = targetLocalAngle - (this.currentAngle % (Math.PI * 2));
                 if(diff > 0) diff -= Math.PI * 2;
@@ -3532,6 +3624,33 @@ function togglePw(id, btn) {
                 const duration = 4500;
                 const start = performance.now();
                 const startAngle = this.currentAngle;
+
+                // เสียงหมุน — Web Audio API (ไม่ต้องโหลดไฟล์)
+                let tickInterval = null;
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    let tickCount = 0;
+                    const maxTicks = Math.floor(spins * n * 1.2);
+                    tickInterval = setInterval(() => {
+                        if(tickCount >= maxTicks) { clearInterval(tickInterval); return; }
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.frequency.value = 600 + Math.random() * 200;
+                        osc.type = 'triangle';
+                        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+                        osc.start(audioCtx.currentTime);
+                        osc.stop(audioCtx.currentTime + 0.06);
+                        tickCount++;
+                        // ทำให้ tick ช้าลงเรื่อยๆ
+                        clearInterval(tickInterval);
+                        const nextDelay = Math.min(30 + tickCount * 2.5, 220);
+                        if(tickCount < maxTicks) {
+                            tickInterval = setInterval(arguments.callee, nextDelay);
+                        }
+                    }, 30);
+                } catch(e) { /* audio not supported */ }
 
                 const animate = (now) => {
                     const elapsed = now - start;
@@ -3544,6 +3663,7 @@ function togglePw(id, btn) {
                     } else {
                         this.currentAngle = finalAngle;
                         this.draw();
+                        if(tickInterval) clearInterval(tickInterval);
                         this.onSpinEnd(prize, newTickets);
                     }
                 };
@@ -4143,6 +4263,18 @@ function togglePw(id, btn) {
 
 
                 app.init();
+
+        // ===== SNOW TOGGLE =====
+        app.toggleSnow = function() {
+            if(typeof window._snowToggle !== 'function') return;
+            const isOn = window._snowToggle();
+            const sw = document.getElementById('snow-toggle-switch');
+            const thumb = document.getElementById('snow-toggle-thumb');
+            if(sw && thumb) {
+                sw.style.background = isOn ? '#e53935' : '#555';
+                thumb.style.left = isOn ? '21px' : '3px';
+            }
+        };
 
         // ===== CUSTOM CONFIRM DIALOG =====
         const CustomConfirm = {

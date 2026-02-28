@@ -186,6 +186,15 @@
             <i class="fas fa-cog" style="color: #ffd700;"></i>
             <span>ແຜງຄວບຄຸມ Admin</span>
         </div>
+        <div class="user-menu-item" onclick="app.toggleSnow()" id="snow-menu-item" style="justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-snowflake" style="color: var(--main-red);"></i>
+                <span>ເກັດຫິມະ</span>
+            </div>
+            <div id="snow-toggle-switch" style="width:42px;height:24px;background:#e53935;border-radius:12px;position:relative;transition:background 0.3s;flex-shrink:0;">
+                <div id="snow-toggle-thumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:21px;transition:left 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
+            </div>
+        </div>
         <div class="user-menu-item" onclick="app.userLogout()" style="color:var(--main-red);">
             <i class="fas fa-sign-out-alt"></i>
             <span>ອອກຈາກລະບົບ</span>
@@ -370,7 +379,7 @@
                 <img id="slip-preview" class="upload-preview">
                 
                 <button class="btn btn-success" style="width:100%; padding:15px; margin-top:10px;" onclick="app.submitTopup()">
-                    <i class="fas fa-paper-plane"></i> ສົ່ງແຈ້ງການໂອນ
+                    <i class="fas fa-paper-plane"></i> ສົ່ງຂໍ້ມູນການໂອນ
                 </button>
             </div>
         </div>
@@ -403,22 +412,21 @@
                 <input type="password" id="current-password" class="form-control" placeholder="ລະຫັດຜ່ານປັດຈຸບັນ" style="padding-right:46px;">
                 <button type="button" onclick="togglePw('current-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
             </div>
-            <div style="position:relative; margin-bottom:6px;">
-                <input type="password" id="new-password" class="form-control" placeholder="ລະຫັດຜ່ານໃໝ່" style="padding-right:46px;" oninput="app.checkPasswordStrength(this.value)">
+            <div style="position:relative; margin-bottom:12px;">
+                <input type="password" id="new-password" class="form-control" placeholder="ລະຫັດຜ່ານໃໝ່" style="padding-right:46px;" oninput="app.checkPwStrengthChange(this.value)">
                 <button type="button" onclick="togglePw('new-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
             </div>
-            <!-- Password Strength Bar -->
-            <div style="margin-bottom:12px;">
-                <div style="background:#222; border-radius:4px; height:5px; overflow:hidden;">
-                    <div id="strength-fill" style="height:100%; width:0%; background:#333; transition:all 0.3s;"></div>
-                </div>
-                <div id="strength-hint" style="font-size:11px; color:#aaa; margin-top:5px;">ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)</div>
-            </div>
-            <div style="position:relative; margin-bottom:8px;">
+            <div style="position:relative; margin-bottom:12px;">
                 <input type="password" id="confirm-password" class="form-control" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່" style="padding-right:46px;">
                 <button type="button" onclick="togglePw('confirm-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; padding:4px;"><i class="fas fa-eye"></i></button>
             </div>
-
+            <!-- Strength bar ຢູ່ດ້ານລຸ່ມສຸດ -->
+            <div style="margin-bottom:12px;">
+                <div style="background:#222; border-radius:4px; height:5px; overflow:hidden;">
+                    <div id="change-strength-fill" style="height:100%; width:0%; background:#333; transition:all 0.3s;"></div>
+                </div>
+                <div id="change-strength-hint" style="font-size:11px; color:#aaa; margin-top:5px;">ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)</div>
+            </div>
             <div style="text-align:right; margin-bottom:15px;">
                 <button onclick="app.openForgotFromProfile()" style="background:none; border:none; color:#aaa; font-size:12px; cursor:pointer; text-decoration:underline;">ລືມລະຫັດ?</button>
             </div>
@@ -1126,10 +1134,12 @@
                     <p style="margin:2px 0 0; font-size:12px; color:#aaa;">Reset Password</p>
                 </div>
             </div>
-            <p style="color:#aaa; font-size:13px; margin-bottom:16px; text-align:center;">ໃສ່ຊື່ຜູ້ໃຊ້ ແລະ PIN 6 ຫຼັກທີ່ຕັ້ງໄວ້ຕອນສະໝັກ</p>
-            <input type="text" id="forgot2-username" class="auth-input" placeholder="ຊື່ຜູ້ໃຊ້">
+            <p style="color:#aaa; font-size:13px; margin-bottom:16px; text-align:center;">ໃສ່ PIN 6 ຫຼັກທີ່ຕັ້ງໄວ້ຕອນສະໝັກ</p>
+            <div id="forgot2-username-wrap">
+                <input type="text" id="forgot2-username" class="auth-input" placeholder="ຊື່ຜູ້ໃຊ້">
+            </div>
             <input type="text" id="forgot2-pin" class="auth-input" placeholder="PIN 6 ຫຼັກ" maxlength="6" inputmode="numeric">
-            <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.verifyForgotPin2()">ສົ່ງຂໍ້ມູນ</button>
+            <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.verifyForgotPin2()">ກວດສອບ</button>
             <div class="auth-toggle"><a onclick="router.back()" style="cursor:pointer;">← ກັບໄປ</a></div>
         </div>
     </main>
@@ -1145,12 +1155,19 @@
                 </div>
             </div>
             <div class="pw-wrap">
-                <input type="password" id="reset2-password" class="auth-input" placeholder="ລະຫັດຜ່ານໃໝ່">
+                <input type="password" id="reset2-password" class="auth-input" placeholder="ລະຫັດຜ່ານໃໝ່" oninput="app.checkPwStrengthReset(this.value)">
                 <button type="button" class="pw-eye" onclick="togglePw('reset2-password',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
             </div>
             <div class="pw-wrap">
                 <input type="password" id="reset2-confirm" class="auth-input" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່">
                 <button type="button" class="pw-eye" onclick="togglePw('reset2-confirm',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
+            </div>
+            <!-- Strength bar ດ້ານລຸ່ມສຸດ -->
+            <div style="margin-bottom:14px;">
+                <div style="background:#222; border-radius:4px; height:5px; overflow:hidden;">
+                    <div id="reset-strength-fill" style="height:100%; width:0%; background:#333; transition:all 0.3s;"></div>
+                </div>
+                <div id="reset-strength-hint" style="font-size:11px; color:#aaa; margin-top:5px;">ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)</div>
             </div>
             <button class="btn btn-red" style="width:100%; padding:14px; font-size:16px;" onclick="app.doResetPassword2()">ບັນທຶກລະຫັດໃໝ່</button>
         </div>
@@ -1171,7 +1188,7 @@
                 <input type="text" id="reg-username" class="auth-input" placeholder="ຊື່ຜູ້ໃຊ້" maxlength="20">
                 <input type="text" id="reg-pin" class="auth-input" placeholder="PIN 6 ຫຼັກ (ຕົວເລກເທົ່ານັ້ນ)" maxlength="6" inputmode="numeric">
                 <div class="pw-wrap">
-                    <input type="password" id="reg-password" class="auth-input" placeholder="ລະຫັດຜ່ານ" oninput="app.checkPasswordStrength(this.value)">
+                    <input type="password" id="reg-password" class="auth-input" placeholder="ລະຫັດຜ່ານ" oninput="app.checkPwStrengthReg(this.value)">
                     <button type="button" class="pw-eye" onclick="togglePw('reg-password',this)" tabindex="-1"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="pw-wrap">
@@ -1180,8 +1197,8 @@
                 </div>
                 <div class="strength-bar-wrap">
                     <div class="strength-label">ຄວາມປອດໄພລະຫັດຜ່ານ / Password strength</div>
-                    <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
-                    <div class="strength-hint" id="strength-hint">ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)</div>
+                    <div class="strength-bar"><div class="strength-fill" id="reg-strength-fill"></div></div>
+                    <div class="strength-hint" id="reg-strength-hint">ລະຫັດຜ່ານຕ້ອງມີ: ຕົວພິມໃຫຍ່ (A-Z) + ຕົວພິມນ້ອຍ (a-z) + ຕົວເລກ (0-9) + ອັກຂະລະພິເສດ (!@#$)</div>
                 </div>
                 <div class="cf-turnstile-wrap">
                     <div class="cf-turnstile" data-sitekey="0x4AAAAAACjo1dZQZ-oTFMJG" data-theme="dark" id="cf-register"></div>
@@ -1410,6 +1427,8 @@
         const canvas = document.getElementById('snow-canvas');
         const ctx = canvas.getContext('2d');
         let W, H, flakes = [];
+        let snowEnabled = true;
+        let animId = null;
 
         function resize() {
             W = canvas.width = window.innerWidth;
@@ -1418,7 +1437,7 @@
         resize();
         window.addEventListener('resize', resize);
 
-        const COUNT = 55;
+        const COUNT = 25;
         const CHARS = ['❄', '❅', '❆', '*'];
 
         for(let i = 0; i < COUNT; i++) {
@@ -1438,6 +1457,7 @@
 
         function draw() {
             ctx.clearRect(0, 0, W, H);
+            if(!snowEnabled) { animId = null; return; }
             flakes.forEach(f => {
                 ctx.save();
                 ctx.globalAlpha = f.opacity;
@@ -1461,9 +1481,21 @@
                 if(f.x > W + 20) f.x = -20;
                 if(f.x < -20) f.x = W + 20;
             });
-            requestAnimationFrame(draw);
+            animId = requestAnimationFrame(draw);
         }
-        draw();
+        animId = requestAnimationFrame(draw);
+
+        // Expose toggle function globally
+        window._snowToggle = function() {
+            snowEnabled = !snowEnabled;
+            if(snowEnabled) {
+                animId = requestAnimationFrame(draw);
+            } else {
+                ctx.clearRect(0, 0, W, H);
+            }
+            return snowEnabled;
+        };
+        window._snowEnabled = () => snowEnabled;
     })();
     </script>
 
