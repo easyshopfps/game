@@ -3833,57 +3833,6 @@ function togglePw(id, btn) {
                 await this.spin(mode);
             },
 
-            playWinSound: function(isMiss) {
-                try {
-                    const AC = window.AudioContext || window.webkitAudioContext;
-                    if(!AC) return;
-                    const ctx = new AC();
-                    if(isMiss) {
-                        // เสียงเศร้า ลงเรื่อยๆ
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain); gain.connect(ctx.destination);
-                        osc.type = 'sawtooth';
-                        osc.frequency.setValueAtTime(380, ctx.currentTime);
-                        osc.frequency.linearRampToValueAtTime(180, ctx.currentTime + 0.55);
-                        gain.gain.setValueAtTime(0.28, ctx.currentTime);
-                        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.55);
-                        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.6);
-                    } else {
-                        // เสียงชนะ — fanfare ขึ้น 5 โน้ต
-                        [523, 659, 784, 1047, 1319].forEach((freq, i) => {
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.connect(gain); gain.connect(ctx.destination);
-                            osc.type = 'sine';
-                            const t = ctx.currentTime + i * 0.11;
-                            osc.frequency.setValueAtTime(freq, t);
-                            gain.gain.setValueAtTime(0, t);
-                            gain.gain.linearRampToValueAtTime(0.32, t + 0.03);
-                            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
-                            osc.start(t); osc.stop(t + 0.5);
-                        });
-                        // sparkle หลัง fanfare
-                        setTimeout(() => {
-                            try {
-                                const ctx2 = new AC();
-                                [880, 1108, 1319, 1760].forEach((f, i) => {
-                                    const o = ctx2.createOscillator();
-                                    const g = ctx2.createGain();
-                                    o.connect(g); g.connect(ctx2.destination);
-                                    o.type = 'triangle';
-                                    const t = ctx2.currentTime + i * 0.09;
-                                    o.frequency.setValueAtTime(f, t);
-                                    g.gain.setValueAtTime(0.18, t);
-                                    g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-                                    o.start(t); o.stop(t + 0.35);
-                                });
-                            } catch(e) {}
-                        }, 620);
-                    }
-                } catch(e) { console.warn('Audio error:', e); }
-            },
-
             showWinPopup: function(prize, desc) {
                 const icon = prize.img_url
                     ? `<img src="${prize.img_url}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">`
@@ -3903,8 +3852,7 @@ function togglePw(id, btn) {
                     iconWrap.style.fontSize = '';
                 }
                 document.getElementById('spin-win-name').textContent = prize.display_name;
-                // confetti + sound
-                this.playWinSound(prize.type === 'miss');
+                // confetti
                 this.launchConfetti();
                 const overlay = document.getElementById('spin-win-overlay');
                 overlay.style.display = 'flex';
@@ -4054,10 +4002,16 @@ function togglePw(id, btn) {
                 const el = document.getElementById('spin-prizes-list');
                 if(!el || !spinWheel.prizes) return;
                 if(!spinWheel.prizes.length) { el.innerHTML = '<p style="color:#555; font-size:12px; text-align:center;">ຍັງບໍ່ມີລາງວັນ</p>'; return; }
-                el.innerHTML = spinWheel.prizes.map(p => {
+                const seen = new Set();
+                const unique = spinWheel.prizes.filter(p => {
+                    const key = (p.display_name || '').trim().toLowerCase();
+                    if(seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                el.innerHTML = unique.map(p => {
                     const dot = `<span class="spin-history-dot" style="background:${p.color||'#888'};"></span>`;
                     const nameEl = `<span style="flex:1; font-size:13px;">${p.emoji||''} ${p.display_name}</span>`;
-                    // ซ่อน % และ stock จากผู้ใช้ทั่วไป
                     return `<div class="spin-history-item">${dot}${nameEl}</div>`;
                 }).join('');
             },
