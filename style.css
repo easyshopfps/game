@@ -1232,8 +1232,9 @@
             background: #1a1a1a;
             border: 1px solid rgba(255, 0, 0, 0.3);
             border-radius: 14px;
-            padding: 10px;
-            min-width: 260px;
+            padding: 8px;
+            min-width: 210px;
+            max-width: 210px;
             max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 8px 30px rgba(0,0,0,0.9);
