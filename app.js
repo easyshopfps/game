@@ -453,21 +453,27 @@ function togglePw(id, btn) {
                 const p = app.db.products.find(x => x.id == id);
                 if(!p) return;
                 activeProduct = p;
-                document.getElementById('det-img').src = p.img;
                 document.getElementById('det-title').innerText = p.name;
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
+
+                // ▶ รายละเอียด ทีละบรรทัด
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     descLines.innerHTML = lines.length
-                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#111;font-weight:700;line-height:1.6;">${l.trim()}</span></div>`).join('')
-                        : `<p style="font-size:14px;color:#111;font-weight:700;line-height:1.6;">${p.desc||''}</p>`;
+                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;"><span style="color:#cc0000;font-size:11px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span></div>`).join('')
+                        : `<p style="font-size:14px;color:#ddd;line-height:1.6;">${p.desc||''}</p>`;
                 }
+
+                // reset qty
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
+
+                // ราคา/อัน
                 const pricePerEl = document.getElementById('det-price-per');
                 if(pricePerEl) pricePerEl.textContent = 'ລາຄາ ' + Number(p.price).toLocaleString() + ' ກີບ / ອັນ';
+
                 app._updateDetailStockUI(p);
                 router.show('view-detail');
             },
