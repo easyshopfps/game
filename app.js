@@ -457,24 +457,17 @@ function togglePw(id, btn) {
                 document.getElementById('det-title').innerText = p.name;
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
-
-                // desc ▶ ทีละบรรทัด สีดำ
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     descLines.innerHTML = lines.length
-                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#111;line-height:1.6;">${l.trim()}</span></div>`).join('')
-                        : `<p style="font-size:14px;color:#333;line-height:1.7;">${p.desc||''}</p>`;
+                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:#cc0000;font-size:11px;margin-top:4px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#111;line-height:1.6;">${l.trim()}</span></div>`).join('')
+                        : `<p style="font-size:14px;color:#333;">${p.desc||''}</p>`;
                 }
-
-                // reset qty
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
-
-                // ราคา/อัน
                 const pricePerEl = document.getElementById('det-price-per');
                 if(pricePerEl) pricePerEl.textContent = 'ລາຄາ ' + Number(p.price).toLocaleString() + ' ກີບ / ອັນ';
-
                 app._updateDetailStockUI(p);
                 router.show('view-detail');
             },
@@ -1000,7 +993,6 @@ function togglePw(id, btn) {
                 setTimeout(() => { this.buyProduct(); }, 100);
             },
 
-            // ===== HELPER: Update stock UI on detail page =====
             _updateDetailStockUI: function(p) {
                 const stockRowEl = document.getElementById('det-stock-row');
                 const buyBtn = document.getElementById('det-buy-btn');
@@ -1008,14 +1000,10 @@ function togglePw(id, btn) {
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
                         if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#cc0000;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
-                        buyBtn.disabled = true;
-                        buyBtn.style.opacity = '0.5';
-                        buyBtn.style.cursor = 'not-allowed';
+                        buyBtn.disabled = true; buyBtn.style.opacity = '0.5'; buyBtn.style.cursor = 'not-allowed';
                     } else {
                         if(stockRowEl) stockRowEl.textContent = 'ຍັງເຫຼືອ ' + p.stock + ' ອັນ';
-                        buyBtn.disabled = false;
-                        buyBtn.style.opacity = '1';
-                        buyBtn.style.cursor = 'pointer';
+                        buyBtn.disabled = false; buyBtn.style.opacity = '1'; buyBtn.style.cursor = 'pointer';
                     }
                 }
             },
