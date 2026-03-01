@@ -458,17 +458,27 @@ function togglePw(id, btn) {
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
 
+                // render desc เป็น ▶ ทีละบรรทัด เหมือนรูปอ้างอิง
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
-                    descLines.innerHTML = lines.length
-                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;"><span style="color:#e00;font-size:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid #e00;margin-top:2px;flex-shrink:0;display:inline-block;transform:rotate(90deg);"></span><span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span></div>`).join('')
-                        : `<p style="font-size:14px;color:#ddd;line-height:1.6;">${p.desc||''}</p>`;
+                    if(lines.length > 0) {
+                        descLines.innerHTML = lines.map(l =>
+                            `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
+                                <span style="color:var(--main-red);font-size:11px;margin-top:3px;flex-shrink:0;">▶</span>
+                                <span>${l.trim()}</span>
+                            </div>`
+                        ).join('');
+                    } else {
+                        descLines.innerHTML = `<div style="color:#888; font-size:13px;">${p.desc || ''}</div>`;
+                    }
                 }
 
+                // reset qty
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
 
+                // ราคา/อัน
                 const pricePerEl = document.getElementById('det-price-per');
                 if(pricePerEl) pricePerEl.textContent = 'ລາຄາ ' + Number(p.price).toLocaleString() + ' ກີບ / ອັນ';
 
@@ -997,17 +1007,22 @@ function togglePw(id, btn) {
                 setTimeout(() => { this.buyProduct(); }, 100);
             },
 
+            // ===== HELPER: Update stock UI on detail page in real-time =====
             _updateDetailStockUI: function(p) {
                 const stockRowEl = document.getElementById('det-stock-row');
                 const buyBtn = document.getElementById('det-buy-btn');
                 if(!buyBtn) return;
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
-                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#e00;font-weight:700;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
-                        buyBtn.disabled = true; buyBtn.style.opacity='0.4'; buyBtn.style.cursor='not-allowed';
+                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-times-circle" style="color:#ff4444;"></i> <span style="color:#ff4444;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
+                        buyBtn.disabled = true;
+                        buyBtn.style.opacity = '0.5';
+                        buyBtn.style.cursor = 'not-allowed';
                     } else {
-                        if(stockRowEl) stockRowEl.textContent = 'ຍັງເຫຼືອ ' + p.stock + ' ອັນ';
-                        buyBtn.disabled = false; buyBtn.style.opacity='1'; buyBtn.style.cursor='pointer';
+                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-store" style="color:#00cc66;"></i> <span>ຍັງເຫຼືອ ' + p.stock + ' ອັນ</span>';
+                        buyBtn.disabled = false;
+                        buyBtn.style.opacity = '1';
+                        buyBtn.style.cursor = 'pointer';
                     }
                 }
             },
@@ -1021,6 +1036,9 @@ function togglePw(id, btn) {
                 qty = Math.max(1, qty + delta);
                 if(p.stock != null && qty > p.stock) qty = p.stock;
                 qtyEl.textContent = qty;
+                // อัปเดตราคารวม
+                const priceEl = document.getElementById('det-price');
+                if(priceEl) priceEl.textContent = Number(p.price * qty).toLocaleString() + ' ₭';
             },
 
             // ===== อัปเดต stock card บนหน้า home ทันทีโดยไม่ต้อง re-render ทั้งหน้า =====
