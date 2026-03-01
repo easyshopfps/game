@@ -458,23 +458,16 @@ function togglePw(id, btn) {
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
 
-                // render desc ▶ ทีละบรรทัด สีดำ
+                // desc ▶ ทีละบรรทัด สีดำ
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
-                    if(lines.length > 0) {
-                        descLines.innerHTML = lines.map(l =>
-                            `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
-                                <span style="color:#e00;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span>
-                                <span style="font-size:14px;color:#111;line-height:1.6;">${l.trim()}</span>
-                            </div>`
-                        ).join('');
-                    } else {
-                        descLines.innerHTML = `<p style="font-size:14px;color:#333;line-height:1.7;">${p.desc||''}</p>`;
-                    }
+                    descLines.innerHTML = lines.length
+                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#111;line-height:1.6;">${l.trim()}</span></div>`).join('')
+                        : `<p style="font-size:14px;color:#333;line-height:1.7;">${p.desc||''}</p>`;
                 }
 
-                // reset qty = 1
+                // reset qty
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
 
@@ -1014,7 +1007,7 @@ function togglePw(id, btn) {
                 if(!buyBtn) return;
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
-                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#e00;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
+                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#cc0000;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
                         buyBtn.disabled = true;
                         buyBtn.style.opacity = '0.5';
                         buyBtn.style.cursor = 'not-allowed';
