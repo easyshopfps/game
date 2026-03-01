@@ -291,22 +291,63 @@
         <div id="list-prods" class="prod-grid"></div>
     </main>
 
-    <main id="view-detail" class="page-view container hidden" style="padding-top:15px; padding-bottom: 110px;">
-        <button class="btn btn-outline btn-sm" onclick="router.back()" style="margin-bottom:15px;"><i class="fas fa-arrow-left"></i> ກັບຄືນ</button>
-        <div class="detail-flex">
-            <img id="det-img" src="" class="detail-img">
-            <div>
-                <h1 id="det-title">Product Name</h1>
-                <div id="det-price">0 ₭</div>
-                <div id="det-stock-info"></div>
-                <div class="desc-box">
-                    <p style="color:var(--main-red); font-weight:600; margin-bottom:8px; font-size:13px;">ລາຍລະອຽດສິນຄ້າ:</p>
-                    <p id="det-desc" style="white-space: pre-line; font-size:13px; line-height:1.7;"></p>
+    <main id="view-detail" class="page-view hidden" style="padding-bottom:110px; background:var(--bg-body);">
+
+        <!-- Hero Image -->
+        <div style="position:relative; width:100%; background:#000;">
+            <img id="det-img" src="" style="width:100%; max-height:300px; object-fit:cover; display:block; opacity:0.92;">
+            <!-- Back button overlay -->
+            <button onclick="router.back()" style="position:absolute; top:14px; left:14px; background:rgba(0,0,0,0.55); border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div style="padding:18px 16px 0;">
+
+            <!-- Title & Price -->
+            <div style="margin-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <i class="fas fa-folder" style="color:#f5c518; font-size:16px;"></i>
+                    <h1 id="det-title" style="font-size:17px; font-weight:700; color:#fff; margin:0; line-height:1.4;"></h1>
                 </div>
-                <button class="btn btn-buy-card" id="det-buy-btn" style="width: 100%; padding: 16px; font-size:15px; border-radius:10px;" onclick="app.showBuyConfirm()">
-                    <i class="fas fa-shopping-cart"></i> ສັ່ງຊື້ຕອນນີ້ເລີຍ!
-                </button>
+                <div id="det-price" style="font-size:34px; font-weight:900; color:#fff; line-height:1.2;"></div>
+                <div id="det-stock-info" style="margin-top:6px;"></div>
             </div>
+
+            <!-- Divider -->
+            <div style="height:1px; background:rgba(255,255,255,0.07); margin-bottom:14px;"></div>
+
+            <!-- Description -->
+            <div class="desc-box" style="margin-bottom:18px;">
+                <p style="color:var(--main-red); font-weight:700; margin-bottom:10px; font-size:13px; letter-spacing:0.3px;">ລາຍລະອຽດສິນຄ້າ:</p>
+                <p id="det-desc" style="white-space:pre-line; font-size:13px; line-height:1.9; color:#ccc; margin:0;"></p>
+            </div>
+
+            <!-- Divider -->
+            <div style="height:1px; background:rgba(255,255,255,0.07); margin-bottom:16px;"></div>
+
+            <!-- Quantity selector -->
+            <div style="margin-bottom:6px; font-size:12px; color:#888; text-align:center; letter-spacing:0.5px;">ຈຳນວນສິນຄ້າທີ່ຈະຊື້</div>
+            <div style="display:flex; align-items:center; gap:0; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); margin-bottom:12px; height:52px;">
+                <button id="det-qty-minus" onclick="app.detailQtyChange(-1)" style="flex:1; height:100%; background:#1e1e1e; border:none; color:#fff; font-size:22px; cursor:pointer; transition:background 0.15s;" onmousedown="this.style.background='#2a2a2a'" onmouseup="this.style.background='#1e1e1e'">−</button>
+                <div style="width:1px; height:100%; background:rgba(255,255,255,0.1);"></div>
+                <div id="det-qty" style="flex:2; text-align:center; font-size:22px; font-weight:800; color:#fff; background:#161616; height:100%; display:flex; align-items:center; justify-content:center;">1</div>
+                <div style="width:1px; height:100%; background:rgba(255,255,255,0.1);"></div>
+                <button id="det-qty-plus" onclick="app.detailQtyChange(1)" style="flex:1; height:100%; background:#1e1e1e; border:none; color:#fff; font-size:22px; cursor:pointer; transition:background 0.15s;" onmousedown="this.style.background='#2a2a2a'" onmouseup="this.style.background='#1e1e1e'">+</button>
+            </div>
+
+            <!-- Stock & Price per unit row -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; font-size:13px;">
+                <span id="det-stock-row" style="color:#aaa;"></span>
+                <span id="det-price-per" style="color:#aaa;"></span>
+            </div>
+
+            <!-- Buy Button -->
+            <button class="btn btn-buy-card" id="det-buy-btn" style="width:100%; padding:17px; font-size:16px; font-weight:800; border-radius:14px; letter-spacing:0.5px; box-shadow:0 6px 24px rgba(255,0,0,0.4);" onclick="app.showBuyConfirm()">
+                <i class="fas fa-shopping-cart"></i> ສັ່ງຊື້ເລີຍ
+            </button>
+
         </div>
     </main>
 
@@ -1357,7 +1398,7 @@
 
             <!-- วิธีได้สิทธิ์ ขึ้นมาก่อน -->
             <div style="background:#111; border-radius:12px; padding:15px; margin:15px 0; border-left:3px solid var(--main-red);">
-                <h4 style="color:var(--main-red); margin:0 0 10px; font-size:14px;"><i class="fas fa-info-circle" style="margin-right:6px;"></i>ວິທີໄດ້ສິດໝຸນ ແລະ ເງື່ອນໄຂຕ່າງໆ</h4>
+                <h4 style="color:var(--main-red); margin:0 0 10px; font-size:14px;"><i class="fas fa-info-circle" style="margin-right:6px;"></i>ວິທີໄດ້ສິດໝຸນ</h4>
                 <div id="spin-how-to" style="font-size:13px; color:#ccc; line-height:1.8;"></div>
             </div>
 
