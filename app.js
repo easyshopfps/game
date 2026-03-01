@@ -455,34 +455,12 @@ function togglePw(id, btn) {
                 activeProduct = p;
                 document.getElementById('det-img').src = p.img;
                 document.getElementById('det-title').innerText = p.name;
-                document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
-                document.getElementById('det-desc').innerText = p.desc || '';
-
-                // render desc เป็น ▶ ทีละบรรทัด เหมือนรูปอ้างอิง
-                const descLines = document.getElementById('det-desc-lines');
-                if(descLines) {
-                    const lines = (p.desc || '').split('\n').filter(l => l.trim());
-                    if(lines.length > 0) {
-                        descLines.innerHTML = lines.map(l =>
-                            `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
-                                <span style="color:var(--main-red);font-size:11px;margin-top:3px;flex-shrink:0;">▶</span>
-                                <span>${l.trim()}</span>
-                            </div>`
-                        ).join('');
-                    } else {
-                        descLines.innerHTML = `<div style="color:#888; font-size:13px;">${p.desc || ''}</div>`;
-                    }
-                }
-
-                // reset qty
-                const qtyEl = document.getElementById('det-qty');
-                if(qtyEl) qtyEl.textContent = '1';
-
-                // ราคา/อัน
-                const pricePerEl = document.getElementById('det-price-per');
-                if(pricePerEl) pricePerEl.textContent = 'ລາຄາ ' + Number(p.price).toLocaleString() + ' ກີບ / ອັນ';
-
+                document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + " ₭";
+                document.getElementById('det-desc').innerText = p.desc;
+                
+                // แสดง Stock ใต้ราคาทันที
                 app._updateDetailStockUI(p);
+                
                 router.show('view-detail');
             },
             admin: () => { 
@@ -1009,36 +987,23 @@ function togglePw(id, btn) {
 
             // ===== HELPER: Update stock UI on detail page in real-time =====
             _updateDetailStockUI: function(p) {
-                const stockRowEl = document.getElementById('det-stock-row');
+                const stockInfoDiv = document.getElementById('det-stock-info');
                 const buyBtn = document.getElementById('det-buy-btn');
-                if(!buyBtn) return;
+                if(!stockInfoDiv || !buyBtn) return;
+                
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
-                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-times-circle" style="color:#ff4444;"></i> <span style="color:#ff4444;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
+                        stockInfoDiv.innerHTML = '<div style="color:rgba(255,68,68,0.7); font-size:12px; margin:6px 0; display:flex; align-items:center; gap:6px;"><span class="stock-icon-wrap"><i class="fas fa-box"></i><i class="fas fa-times stock-badge-x"></i></span> ສິນຄ້າໝົດສະຕ໊ອກແລ້ວ</div>';
                         buyBtn.disabled = true;
                         buyBtn.style.opacity = '0.5';
                         buyBtn.style.cursor = 'not-allowed';
                     } else {
-                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-store" style="color:#00cc66;"></i> <span>ຍັງເຫຼືອ ' + p.stock + ' ອັນ</span>';
+                        stockInfoDiv.innerHTML = `<div style="color:rgba(200,200,200,0.75); font-size:12px; margin:6px 0; display:flex; align-items:center; gap:6px;"><span class="stock-icon-wrap"><i class="fas fa-box"></i><i class="fas fa-check stock-badge-check"></i></span> ຄົງເຫຼືອ ${p.stock} ອັນ</div>`;
                         buyBtn.disabled = false;
                         buyBtn.style.opacity = '1';
                         buyBtn.style.cursor = 'pointer';
                     }
                 }
-            },
-
-            detailQtyChange: function(delta) {
-                const p = activeProduct;
-                if(!p) return;
-                const qtyEl = document.getElementById('det-qty');
-                if(!qtyEl) return;
-                let qty = parseInt(qtyEl.textContent) || 1;
-                qty = Math.max(1, qty + delta);
-                if(p.stock != null && qty > p.stock) qty = p.stock;
-                qtyEl.textContent = qty;
-                // อัปเดตราคารวม
-                const priceEl = document.getElementById('det-price');
-                if(priceEl) priceEl.textContent = Number(p.price * qty).toLocaleString() + ' ₭';
             },
 
             // ===== อัปเดต stock card บนหน้า home ทันทีโดยไม่ต้อง re-render ทั้งหน้า =====
@@ -4037,10 +4002,16 @@ function togglePw(id, btn) {
                 const el = document.getElementById('spin-prizes-list');
                 if(!el || !spinWheel.prizes) return;
                 if(!spinWheel.prizes.length) { el.innerHTML = '<p style="color:#555; font-size:12px; text-align:center;">ຍັງບໍ່ມີລາງວັນ</p>'; return; }
-                el.innerHTML = spinWheel.prizes.map(p => {
+                const seen = new Set();
+                const unique = spinWheel.prizes.filter(p => {
+                    const key = (p.display_name || '').trim().toLowerCase();
+                    if(seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                el.innerHTML = unique.map(p => {
                     const dot = `<span class="spin-history-dot" style="background:${p.color||'#888'};"></span>`;
                     const nameEl = `<span style="flex:1; font-size:13px;">${p.emoji||''} ${p.display_name}</span>`;
-                    // ซ่อน % และ stock จากผู้ใช้ทั่วไป
                     return `<div class="spin-history-item">${dot}${nameEl}</div>`;
                 }).join('');
             },
