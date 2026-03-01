@@ -453,24 +453,26 @@ function togglePw(id, btn) {
                 const p = app.db.products.find(x => x.id == id);
                 if(!p) return;
                 activeProduct = p;
+                document.getElementById('det-img').src = p.img;
                 document.getElementById('det-title').innerText = p.name;
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
 
-                // ▶ รายละเอียด ทีละบรรทัด
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     descLines.innerHTML = lines.length
-                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;"><span style="color:#cc0000;font-size:11px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span></div>`).join('')
+                        ? lines.map(l => `
+                            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+                                <span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span>
+                                <span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span>
+                            </div>`).join('')
                         : `<p style="font-size:14px;color:#ddd;line-height:1.6;">${p.desc||''}</p>`;
                 }
 
-                // reset qty
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
 
-                // ราคา/อัน
                 const pricePerEl = document.getElementById('det-price-per');
                 if(pricePerEl) pricePerEl.textContent = 'ລາຄາ ' + Number(p.price).toLocaleString() + ' ກີບ / ອັນ';
 
@@ -1006,10 +1008,10 @@ function togglePw(id, btn) {
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
                         if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#cc0000;font-weight:700;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
-                        buyBtn.disabled = true; buyBtn.style.opacity = '0.5'; buyBtn.style.cursor = 'not-allowed';
+                        buyBtn.disabled = true; buyBtn.style.opacity='0.4'; buyBtn.style.cursor='not-allowed';
                     } else {
                         if(stockRowEl) stockRowEl.textContent = 'ຍັງເຫຼືອ ' + p.stock + ' ອັນ';
-                        buyBtn.disabled = false; buyBtn.style.opacity = '1'; buyBtn.style.cursor = 'pointer';
+                        buyBtn.disabled = false; buyBtn.style.opacity='1'; buyBtn.style.cursor='pointer';
                     }
                 }
             },

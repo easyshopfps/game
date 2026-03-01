@@ -291,55 +291,62 @@
         <div id="list-prods" class="prod-grid"></div>
     </main>
 
-    <main id="view-detail" class="page-view hidden" style="background:#000; padding:14px 14px 110px; min-height:100vh;">
+    <main id="view-detail" class="page-view hidden" style="background:#000; min-height:100vh; padding-bottom:110px;">
 
-        <!-- ปุ่มกลับ -->
-        <button onclick="router.back()" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer; margin-bottom:14px; padding:0; display:flex; align-items:center; gap:8px;">
-            <i class="fas fa-arrow-left"></i>
-        </button>
+        <!-- ปุ่มกลับ + พื้นที่ด้านบน -->
+        <div style="padding:14px 16px 0;">
+            <button onclick="router.back()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
 
-        <!-- Dark Gray Card -->
-        <div style="background:#1c1c1c; border-radius:16px; padding:20px 18px 22px;">
+        <!-- Logo / รูปสินค้า — กึ่งกลาง บนพื้นดำ -->
+        <div style="display:flex;justify-content:center;align-items:center;padding:20px 30px 16px;">
+            <img id="det-img" src="" style="max-width:75%;max-height:180px;object-fit:contain;border-radius:10px;">
+        </div>
+
+        <!-- CARD สีเทาเข้ม -->
+        <div style="background:#1e1e1e;border-radius:20px;margin:0 12px;padding:22px 20px 24px;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
 
             <!-- ชื่อสินค้า -->
-            <p id="det-title" style="font-size:16px; font-weight:700; color:#fff; margin:0 0 18px; line-height:1.5;"></p>
+            <p id="det-title" style="font-size:18px;font-weight:800;color:#fff;margin:0 0 20px;line-height:1.4;"></p>
 
             <!-- ─── ລາຍລະອຽດສິນຄ້າ ─── -->
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                <div style="flex:1; height:1.5px; background:#cc0000;"></div>
-                <span style="font-size:12px; font-weight:700; color:#ccc; white-space:nowrap; letter-spacing:0.5px;">ລາຍລະອຽດສິນຄ້າ</span>
-                <div style="flex:1; height:1.5px; background:#cc0000;"></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                <div style="flex:1;height:1.5px;background:#cc0000;"></div>
+                <span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;padding:0 4px;">ລາຍລະອຽດສິນຄ້າ</span>
+                <div style="flex:1;height:1.5px;background:#cc0000;"></div>
             </div>
 
-            <!-- ▶ รายละเอียด -->
+            <!-- ▶ ข้อมูลสินค้า -->
             <div id="det-desc-lines" style="margin-bottom:20px;"></div>
 
-            <!-- ─── ຈຳນວນ ─── -->
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                <div style="width:24px; height:1.5px; background:#cc0000;"></div>
-                <span style="font-size:12px; font-weight:600; color:#aaa; white-space:nowrap;">ຈຳນວນສິນຄ້າທີ່ຈະຊື້</span>
-                <div style="flex:1; height:1.5px; background:#cc0000;"></div>
+            <!-- ─── ຈຳນວນສິນຄ້າທີ່ຈະຊື້ ─── -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                <div style="width:32px;height:1.5px;background:#cc0000;"></div>
+                <span style="font-size:13px;font-weight:600;color:#bbb;white-space:nowrap;">ຈຳນວນສິນຄ້າທີ່ຈະຊື້</span>
+                <div style="flex:1;height:1.5px;background:#cc0000;"></div>
             </div>
 
             <!-- Quantity Selector -->
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                 <button id="det-qty-minus" onclick="app.detailQtyChange(-1)"
-                    style="width:46px; height:46px; background:#cc0000; border:none; color:#fff; font-size:22px; font-weight:900; border-radius:8px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;">−</button>
+                    style="width:52px;height:52px;background:#cc0000;border:none;color:#fff;font-size:26px;font-weight:900;border-radius:10px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
                 <div id="det-qty"
-                    style="flex:1; height:46px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:#111;">1</div>
+                    style="flex:1;height:52px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#111;">1</div>
                 <button id="det-qty-plus" onclick="app.detailQtyChange(1)"
-                    style="width:46px; height:46px; background:#cc0000; border:none; color:#fff; font-size:22px; font-weight:900; border-radius:8px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;">+</button>
+                    style="width:52px;height:52px;background:#cc0000;border:none;color:#fff;font-size:26px;font-weight:900;border-radius:10px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
             </div>
 
-            <!-- stock ซ้าย / ราคา/อัน ขวา -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-                <span id="det-stock-row" style="font-size:12px; color:#aaa;"></span>
-                <span id="det-price-per" style="font-size:12px; color:#aaa;"></span>
+            <!-- stock ซ้าย + ราคา/อัน ขวา -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <span id="det-stock-row" style="font-size:13px;color:#aaa;font-weight:600;"></span>
+                <span id="det-price-per" style="font-size:13px;color:#aaa;font-weight:600;"></span>
             </div>
 
             <!-- ปุ่มซื้อ -->
             <button id="det-buy-btn" onclick="app.showBuyConfirm()"
-                style="width:100%; padding:15px; background:#cc0000; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:800; cursor:pointer; letter-spacing:0.3px;">
+                style="width:100%;padding:16px;background:#cc0000;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">
                 ສັ່ງຊື້ເລີຍ
             </button>
 
@@ -348,7 +355,6 @@
         <div id="det-price" style="display:none;"></div>
         <div id="det-stock-info" style="display:none;"></div>
         <div id="det-desc" style="display:none;"></div>
-        <div id="det-img" style="display:none;"></div>
 
     </main>
 
