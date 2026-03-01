@@ -462,11 +462,7 @@ function togglePw(id, btn) {
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     descLines.innerHTML = lines.length
-                        ? lines.map(l => `
-                            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
-                                <span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span>
-                                <span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span>
-                            </div>`).join('')
+                        ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;"><span style="color:#e00;font-size:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid #e00;margin-top:2px;flex-shrink:0;display:inline-block;transform:rotate(90deg);"></span><span style="font-size:14px;color:#ddd;font-weight:500;line-height:1.6;">${l.trim()}</span></div>`).join('')
                         : `<p style="font-size:14px;color:#ddd;line-height:1.6;">${p.desc||''}</p>`;
                 }
 
@@ -1007,7 +1003,7 @@ function togglePw(id, btn) {
                 if(!buyBtn) return;
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
-                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#cc0000;font-weight:700;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
+                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#e00;font-weight:700;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
                         buyBtn.disabled = true; buyBtn.style.opacity='0.4'; buyBtn.style.cursor='not-allowed';
                     } else {
                         if(stockRowEl) stockRowEl.textContent = 'ຍັງເຫຼືອ ' + p.stock + ' ອັນ';
