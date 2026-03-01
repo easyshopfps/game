@@ -462,7 +462,7 @@ function togglePw(id, btn) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     descLines.innerHTML = lines.length
                         ? lines.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:#cc0000;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span><span style="font-size:14px;color:#111;font-weight:700;line-height:1.6;">${l.trim()}</span></div>`).join('')
-                        : `<p style="font-size:14px;color:#111;font-weight:700;">${p.desc||''}</p>`;
+                        : `<p style="font-size:14px;color:#111;font-weight:700;line-height:1.6;">${p.desc||''}</p>`;
                 }
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
