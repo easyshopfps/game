@@ -458,23 +458,23 @@ function togglePw(id, btn) {
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + ' ₭';
                 document.getElementById('det-desc').innerText = p.desc || '';
 
-                // render desc เป็น ▶ ทีละบรรทัด เหมือนรูปอ้างอิง
+                // render desc ▶ ทีละบรรทัด สีดำ
                 const descLines = document.getElementById('det-desc-lines');
                 if(descLines) {
                     const lines = (p.desc || '').split('\n').filter(l => l.trim());
                     if(lines.length > 0) {
                         descLines.innerHTML = lines.map(l =>
-                            `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
-                                <span style="color:var(--main-red);font-size:11px;margin-top:3px;flex-shrink:0;">▶</span>
-                                <span>${l.trim()}</span>
+                            `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+                                <span style="color:#e00;font-size:12px;margin-top:3px;flex-shrink:0;">▶</span>
+                                <span style="font-size:14px;color:#111;line-height:1.6;">${l.trim()}</span>
                             </div>`
                         ).join('');
                     } else {
-                        descLines.innerHTML = `<div style="color:#888; font-size:13px;">${p.desc || ''}</div>`;
+                        descLines.innerHTML = `<p style="font-size:14px;color:#333;line-height:1.7;">${p.desc||''}</p>`;
                     }
                 }
 
-                // reset qty
+                // reset qty = 1
                 const qtyEl = document.getElementById('det-qty');
                 if(qtyEl) qtyEl.textContent = '1';
 
@@ -1007,19 +1007,19 @@ function togglePw(id, btn) {
                 setTimeout(() => { this.buyProduct(); }, 100);
             },
 
-            // ===== HELPER: Update stock UI on detail page in real-time =====
+            // ===== HELPER: Update stock UI on detail page =====
             _updateDetailStockUI: function(p) {
                 const stockRowEl = document.getElementById('det-stock-row');
                 const buyBtn = document.getElementById('det-buy-btn');
                 if(!buyBtn) return;
                 if(p.stock !== undefined && p.stock !== null) {
                     if(p.stock <= 0) {
-                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-times-circle" style="color:#ff4444;"></i> <span style="color:#ff4444;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
+                        if(stockRowEl) stockRowEl.innerHTML = '<span style="color:#e00;">ສິນຄ້າໝົດສະຕ໊ອກ</span>';
                         buyBtn.disabled = true;
                         buyBtn.style.opacity = '0.5';
                         buyBtn.style.cursor = 'not-allowed';
                     } else {
-                        if(stockRowEl) stockRowEl.innerHTML = '<i class="fas fa-store" style="color:#00cc66;"></i> <span>ຍັງເຫຼືອ ' + p.stock + ' ອັນ</span>';
+                        if(stockRowEl) stockRowEl.textContent = 'ຍັງເຫຼືອ ' + p.stock + ' ອັນ';
                         buyBtn.disabled = false;
                         buyBtn.style.opacity = '1';
                         buyBtn.style.cursor = 'pointer';
@@ -1036,9 +1036,6 @@ function togglePw(id, btn) {
                 qty = Math.max(1, qty + delta);
                 if(p.stock != null && qty > p.stock) qty = p.stock;
                 qtyEl.textContent = qty;
-                // อัปเดตราคารวม
-                const priceEl = document.getElementById('det-price');
-                if(priceEl) priceEl.textContent = Number(p.price * qty).toLocaleString() + ' ₭';
             },
 
             // ===== อัปเดต stock card บนหน้า home ทันทีโดยไม่ต้อง re-render ทั้งหน้า =====
