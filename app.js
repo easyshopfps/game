@@ -454,11 +454,18 @@ function togglePw(id, btn) {
                 const p = app.db.products.find(x => x.id == id);
                 if(!p) return;
                 activeProduct = p;
+                buyQty = 1; // reset quantity every time detail page opens
                 document.getElementById('det-img').src = p.img;
                 document.getElementById('det-title').innerText = p.name;
                 document.getElementById('det-price').innerText = Number(p.price).toLocaleString() + " ₭";
                 document.getElementById('det-desc').innerText = p.desc;
-                
+                // Reset qty display
+                const detQty = document.getElementById('det-qty-display');
+                if(detQty) detQty.textContent = '1';
+                const totalDisplay = document.getElementById('det-total-display');
+                if(totalDisplay) totalDisplay.style.display = 'none';
+                // Update qty buttons
+                app._updateQtyButtons();
                 // แสดง Stock ใต้ราคาทันที
                 app._updateDetailStockUI(p);
                 
@@ -972,7 +979,7 @@ function togglePw(id, btn) {
                 document.getElementById('receipt-price-each').textContent = `${data.price.toLocaleString()} ₭ / ອັນ`;
                 document.getElementById('receipt-qty').textContent = data.qty + ' ອັນ';
                 document.getElementById('receipt-total').textContent = data.totalAmount.toLocaleString() + ' ₭';
-                // Product unique ID
+                this._receiptUid = data.productUniqueId || null;
                 const uidSection = document.getElementById('receipt-uid-section');
                 if(data.productUniqueId) {
                     document.getElementById('receipt-uid').textContent = data.productUniqueId;
@@ -980,57 +987,46 @@ function togglePw(id, btn) {
                 } else {
                     uidSection.style.display = 'none';
                 }
-                const overlay = document.getElementById('order-receipt-overlay');
-                const modal = document.getElementById('order-receipt-modal');
-                overlay.style.display = 'flex';
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        modal.style.transform = 'scale(1)';
-                        modal.style.opacity = '1';
-                    });
+                router.show('view-receipt');
+            },
+
+            copyReceiptUid: function() {
+                const uid = this._receiptUid;
+                if(!uid) return;
+                navigator.clipboard.writeText(uid).then(() => {
+                    const btn = document.getElementById('receipt-uid-copy-btn');
+                    if(btn) { btn.innerHTML = '<i class="fas fa-check"></i> ຄັດລອກແລ້ວ'; btn.style.background = '#1a4731'; btn.style.color = '#00e676'; }
+                    setTimeout(() => {
+                        if(btn) { btn.innerHTML = '<i class="fas fa-copy"></i> ຄັດລອກ'; btn.style.background = '#1e3a5f'; btn.style.color = '#60a5fa'; }
+                    }, 2000);
+                }).catch(() => {
+                    NotificationManager.info('ກົດຄ້າງທີ່ ID ເພື່ອຄັດລອກ');
                 });
             },
 
-            closeReceipt: function() {
-                const overlay = document.getElementById('order-receipt-overlay');
-                const modal = document.getElementById('order-receipt-modal');
-                modal.style.transform = 'scale(0.85)';
-                modal.style.opacity = '0';
-                setTimeout(() => { overlay.style.display = 'none'; }, 350);
+            goToOrderHistory: function() {
+                router.show('view-profile');
+                setTimeout(() => { this.openModal('order-history-modal'); this.renderOrderHistory(); }, 200);
             },
 
-
-
-            // ===== BUY CONFIRM POPUP =====
+            // ===== BUY CONFIRM (Full-screen page) =====
             showBuyConfirm: function() {
                 if(!currentUser) { NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ'); return; }
                 if(!activeProduct) return;
-                // Check stock first
                 if(activeProduct.stock !== null && activeProduct.stock !== undefined && activeProduct.stock <= 0) {
                     NotificationManager.error('ສິນຄ້ານີ້ໝົດສະຕ໊ອກແລ້ວ');
                     return;
                 }
-                // Reset quantity
-                buyQty = 1;
-                document.getElementById('buy-confirm-qty').textContent = '1';
-                // Fill popup info
+                const price = Number(activeProduct.price || 0);
+                const total = price * buyQty;
                 document.getElementById('buy-confirm-img').src = activeProduct.img || '';
                 document.getElementById('buy-confirm-name').textContent = activeProduct.name || '';
-                const price = Number(activeProduct.price || 0);
                 document.getElementById('buy-confirm-price').textContent = price.toLocaleString() + ' ₭';
                 document.getElementById('buy-confirm-balance').textContent = Number(currentUser.balance || 0).toLocaleString() + ' ₭';
-                document.getElementById('buy-confirm-total').textContent = price.toLocaleString() + ' ₭';
-                // Update qty buttons state
-                this._updateQtyButtons();
-                // Show overlay
-                const overlay = document.getElementById('buy-confirm-overlay');
-                const sheet = document.getElementById('buy-confirm-sheet');
-                overlay.style.display = 'flex';
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
-                });
-                // Tap outside to close
-                overlay.onclick = (e) => { if(e.target === overlay) this.closeBuyConfirm(); };
+                document.getElementById('bc-qty-label').textContent = buyQty;
+                document.getElementById('bc-subtotal').textContent = total.toLocaleString() + ' ₭';
+                document.getElementById('buy-confirm-total').textContent = total.toLocaleString() + ' ₭';
+                router.show('view-buy-confirm');
             },
 
             changeQty: function(delta) {
@@ -1039,8 +1035,20 @@ function togglePw(id, btn) {
                 const maxStock = (activeProduct.stock !== null && activeProduct.stock !== undefined) ? activeProduct.stock : 99;
                 const maxQty = Math.min(maxStock, 99);
                 buyQty = Math.max(1, Math.min(maxQty, buyQty + delta));
-                document.getElementById('buy-confirm-qty').textContent = buyQty;
-                document.getElementById('buy-confirm-total').textContent = (price * buyQty).toLocaleString() + ' ₭';
+                // Update detail page qty display
+                const detQty = document.getElementById('det-qty-display');
+                if(detQty) detQty.textContent = buyQty;
+                // Update total display
+                const totalDisplay = document.getElementById('det-total-display');
+                const totalPrice = document.getElementById('det-total-price');
+                if(totalDisplay && totalPrice) {
+                    if(buyQty > 1) {
+                        totalDisplay.style.display = 'flex';
+                        totalPrice.textContent = (price * buyQty).toLocaleString() + ' ₭';
+                    } else {
+                        totalDisplay.style.display = 'none';
+                    }
+                }
                 this._updateQtyButtons();
             },
 
@@ -1054,16 +1062,13 @@ function togglePw(id, btn) {
             },
 
             closeBuyConfirm: function() {
-                const overlay = document.getElementById('buy-confirm-overlay');
-                const sheet = document.getElementById('buy-confirm-sheet');
-                sheet.style.transform = 'translateY(100%)';
-                setTimeout(() => { overlay.style.display = 'none'; }, 380);
+                router.back();
             },
 
             confirmBuy: function() {
-                this.closeBuyConfirm();
-                setTimeout(() => { this.buyProduct(); }, 100);
+                this.buyProduct();
             },
+
 
             // ===== HELPER: Update stock UI on detail page in real-time =====
             _updateDetailStockUI: function(p) {
@@ -1191,10 +1196,13 @@ function togglePw(id, btn) {
                     ${order.product_unique_id ? `
                     <div class="product-id-badge">
                         <div class="id-icon"><i class="fas fa-id-badge"></i></div>
-                        <div class="id-text">
+                        <div class="id-text" style="flex:1;min-width:0;">
                             <div class="id-label">🔑 ລະຫັດສິນຄ້າຂອງທ່ານ</div>
                             <div class="id-value">${order.product_unique_id}</div>
                         </div>
+                        <button onclick="app.copyProductId('${order.product_unique_id}')" id="copy-pid-btn" style="padding:8px 12px;border:none;background:#1e3a5f;color:#60a5fa;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Noto Sans Lao',sans-serif;margin-left:10px;">
+                            <i class="fas fa-copy"></i> ຄັດລອກ
+                        </button>
                     </div>` : ''}
                 `;
                 
@@ -1204,6 +1212,16 @@ function togglePw(id, btn) {
                 dlBtn.style.display = (prod && prod.file_content) ? 'flex' : 'none';
                 
                 this.openModal('order-detail-modal');
+            },
+
+            copyProductId: function(uid) {
+                navigator.clipboard.writeText(uid).then(() => {
+                    const btn = document.getElementById('copy-pid-btn');
+                    if(btn) { btn.innerHTML = '<i class="fas fa-check"></i> ຄັດລອກແລ້ວ'; btn.style.background = '#1a4731'; btn.style.color = '#00e676'; }
+                    setTimeout(() => {
+                        if(btn) { btn.innerHTML = '<i class="fas fa-copy"></i> ຄັດລອກ'; btn.style.background = '#1e3a5f'; btn.style.color = '#60a5fa'; }
+                    }, 2000);
+                }).catch(() => NotificationManager.info('ກົດຄ້າງທີ່ ID ເພື່ອຄັດລອກ'));
             },
 
             renderOrderHistory: async function() {
@@ -1276,7 +1294,8 @@ function togglePw(id, btn) {
                 }
                 // โหลด product IDs เมื่อเปิด tab
                 if(id === 'tab-product-ids') {
-                    this.loadProductIds();
+                    // default to product-ids sub-tab
+                    this.switchProductIdSubTab('product-ids');
                 }
                 // โหลดประกาศเมื่อเปิด tab ประกาศ
                 if(id === 'tab-announcement') {
@@ -3519,6 +3538,81 @@ function togglePw(id, btn) {
                     o.buyer.toLowerCase().includes(q)
                 );
                 this._renderProductIdsTable(filtered);
+            },
+
+            switchProductIdSubTab: function(tab) {
+                const isId = tab === 'product-ids';
+                document.getElementById('sub-tab-product-ids').style.display = isId ? 'block' : 'none';
+                document.getElementById('sub-tab-bills').style.display = isId ? 'none' : 'block';
+                const idBtn = document.getElementById('sub-tab-product-id-btn');
+                const billBtn = document.getElementById('sub-tab-bill-btn');
+                if(isId) {
+                    idBtn.style.border = '1.5px solid #60a5fa'; idBtn.style.background = 'rgba(96,165,250,0.15)'; idBtn.style.color = '#60a5fa';
+                    billBtn.style.border = '1.5px solid #333'; billBtn.style.background = 'transparent'; billBtn.style.color = '#aaa';
+                    this.loadProductIds();
+                } else {
+                    billBtn.style.border = '1.5px solid #60a5fa'; billBtn.style.background = 'rgba(96,165,250,0.15)'; billBtn.style.color = '#60a5fa';
+                    idBtn.style.border = '1.5px solid #333'; idBtn.style.background = 'transparent'; idBtn.style.color = '#aaa';
+                    this.loadBills();
+                }
+            },
+
+            loadBills: async function() {
+                const tbody = document.getElementById('t-bills');
+                if(!tbody) return;
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;"><i class="fas fa-spinner fa-spin"></i> ກຳລັງໂຫຼດ...</td></tr>';
+                const { data: orders } = await _supabase.from('orders').select('*').order('created_at', { ascending: false });
+                if(!orders || orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">ຍັງບໍ່ມີຂໍ້ມູນ</td></tr>';
+                    return;
+                }
+                const userIds = [...new Set(orders.map(o => o.user_id))];
+                const { data: users } = await _supabase.from('site_users').select('id,username').in('id', userIds);
+                const userMap = {};
+                if(users) users.forEach(u => userMap[u.id] = u.username);
+                this._allBills = orders.map(o => ({
+                    bill: o.bill_number || '-',
+                    product: o.product_name || '-',
+                    qty: o.quantity || 1,
+                    total: Number(o.total_amount || 0),
+                    buyer: userMap[o.user_id] || String(o.user_id),
+                    date: o.created_at ? new Date(o.created_at).toLocaleDateString('lo-LA') : '-'
+                }));
+                this._renderBillsTable(this._allBills);
+            },
+
+            _renderBillsTable: function(list) {
+                const tbody = document.getElementById('t-bills');
+                const countEl = document.getElementById('bill-count');
+                if(!tbody) return;
+                if(!list || list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>';
+                    if(countEl) countEl.textContent = '';
+                    return;
+                }
+                tbody.innerHTML = list.map(o => `
+                    <tr>
+                        <td><span style="font-family:monospace;color:#a78bfa;font-weight:700;font-size:11px;">${o.bill}</span></td>
+                        <td style="font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.product}">${o.product}</td>
+                        <td style="font-size:12px;color:#ccc;text-align:center;">${o.qty}</td>
+                        <td style="font-size:12px;color:#e53935;font-weight:600;">${o.total.toLocaleString()} ₭</td>
+                        <td style="font-size:12px;color:#ccc;">${o.buyer}</td>
+                        <td style="font-size:11px;color:#aaa;">${o.date}</td>
+                    </tr>
+                `).join('');
+                if(countEl) countEl.textContent = `ທັງໝົດ: ${list.length} ລາຍການ`;
+            },
+
+            filterBills: function(query) {
+                if(!this._allBills) return;
+                const q = query.toLowerCase().trim();
+                if(!q) { this._renderBillsTable(this._allBills); return; }
+                const filtered = this._allBills.filter(o =>
+                    o.bill.toLowerCase().includes(q) ||
+                    o.product.toLowerCase().includes(q) ||
+                    o.buyer.toLowerCase().includes(q)
+                );
+                this._renderBillsTable(filtered);
             },
 
             deleteProductId: async function(orderId) {
