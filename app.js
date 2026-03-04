@@ -241,6 +241,7 @@ function togglePw(id, btn) {
         let activeProduct = null;
         let currentUser = null;
         let selectedAmount = null;
+        let buyQty = 1; // ຈຳນວນສິນຄ້າທີ່ເລືອກ
 
         // ========================================
         // NOTIFICATION SYSTEM (แทน alert)
@@ -800,6 +801,13 @@ function togglePw(id, btn) {
                 }
             },
 
+            // ===== GENERATE BILL NUMBER (unique, never repeats) =====
+            _generateBillNumber: function() {
+                const now = Date.now();
+                const rand = Math.random().toString(36).substring(2, 10).toUpperCase();
+                return 'BILL-' + now + '-' + rand;
+            },
+
             buyProduct: async function() {
                 if(!currentUser) {
                     NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ');
@@ -807,10 +815,11 @@ function togglePw(id, btn) {
                 }
                 if(!activeProduct) return;
 
+                const qty = buyQty || 1;
+
                 // ===== CHECK LIVE STOCK FROM DATABASE BEFORE PURCHASE =====
                 showProcessing('ກຳລັງກວດສອບຂໍ້ມູນ...');
                 
-                // Fetch latest product data from DB (prevent stale cache issues)
                 const { data: liveProduct, error: fetchErr } = await _supabase
                     .from('products')
                     .select('*')
@@ -823,20 +832,25 @@ function togglePw(id, btn) {
                     return;
                 }
 
-                // Update activeProduct with live data
                 activeProduct = liveProduct;
 
-                // Check if out of stock (live check)
-                if(liveProduct.stock !== null && liveProduct.stock !== undefined && liveProduct.stock <= 0) {
-                    hideProcessing();
-                    NotificationManager.error('ສິນຄ້ານີ້ໝົດສະຕ໊ອກແລ້ວ! ກະລຸນາລໍຖ້າການ restocking');
-                    // Update UI to reflect out-of-stock
-                    this._updateDetailStockUI(liveProduct);
-                    return;
+                // Check stock (must have enough for qty)
+                if(liveProduct.stock !== null && liveProduct.stock !== undefined) {
+                    if(liveProduct.stock <= 0) {
+                        hideProcessing();
+                        NotificationManager.error('ສິນຄ້ານີ້ໝົດສະຕ໊ອກແລ້ວ!');
+                        this._updateDetailStockUI(liveProduct);
+                        return;
+                    }
+                    if(liveProduct.stock < qty) {
+                        hideProcessing();
+                        NotificationManager.error(`ສະຕ໊ອກບໍ່ພຽງພໍ! ເຫຼືອ ${liveProduct.stock} ອັນ`);
+                        return;
+                    }
                 }
 
-                // Fetch latest user balance from DB (prevent stale cache)
-                const { data: liveUser, error: userFetchErr } = await _supabase
+                // Fetch latest user balance
+                const { data: liveUser } = await _supabase
                     .from('site_users')
                     .select('balance')
                     .eq('id', currentUser.id)
@@ -844,26 +858,25 @@ function togglePw(id, btn) {
                 
                 const balance = liveUser ? (liveUser.balance || 0) : (currentUser.balance || 0);
                 const price = liveProduct.price || 0;
+                const totalAmount = price * qty;
                 
-                if(balance < price) {
+                if(balance < totalAmount) {
                     hideProcessing();
-                    NotificationManager.error(`ຍອດເງິນບໍ່ພຽງພໍ! ຍອດຄົງເຫຼືອ: ${balance.toLocaleString()} ₭ (ຕ້ອງການ: ${price.toLocaleString()} ₭)`);
+                    NotificationManager.error(`ຍອດເງິນບໍ່ພຽງພໍ! ຍອດຄົງເຫຼືອ: ${balance.toLocaleString()} ₭ (ຕ້ອງການ: ${totalAmount.toLocaleString()} ₭)`);
                     return;
                 }
                 
-                // หักเงิน
                 showProcessing('ກຳລັງດຳເນີນການສັ່ງຊື້<br>ກະລຸນາລໍຖ້າ ຢ່າປິດໜ້ານີ້...');
-                const newBalance = balance - price;
+                const newBalance = balance - totalAmount;
                 const { error: balErr } = await _supabase.from('site_users').update({ balance: newBalance }).eq('id', currentUser.id);
                 if(balErr) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + balErr.message); return; }
                 
-                // ลด stock ถ้ามี (ใช้ live stock value)
+                // ลด stock
                 let newStock = null;
                 if(liveProduct.stock !== null && liveProduct.stock !== undefined && liveProduct.stock > 0) {
-                    newStock = liveProduct.stock - 1;
+                    newStock = liveProduct.stock - qty;
                     const { error: stockErr } = await _supabase.from('products').update({ stock: newStock }).eq('id', liveProduct.id);
                     if(stockErr) {
-                        // Rollback balance
                         await _supabase.from('site_users').update({ balance: balance }).eq('id', currentUser.id);
                         hideProcessing();
                         NotificationManager.error('ເກີດຂໍ້ຜິດພາດໃນການອັພເດດສະຕ໊ອກ');
@@ -872,31 +885,33 @@ function togglePw(id, btn) {
                     activeProduct.stock = newStock;
                 }
                 
-                // Generate unique product ID if product has has_product_id=true
+                // Generate product unique ID
                 let generatedProductId = null;
                 if(liveProduct.has_product_id) {
-                    // Generate unique ID: EZ + timestamp base36 + random chars, never repeats
                     const ts = Date.now().toString(36).toUpperCase();
                     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
                     generatedProductId = 'EZ-' + ts + '-' + rand;
                 }
+
+                // Generate Bill Number
+                const billNumber = this._generateBillNumber();
                 
-                // บันทึกคำสั่งซื้อ
+                // บันทึก order
                 const orderData = {
                     user_id: currentUser.id,
                     product_id: liveProduct.id,
                     product_name: liveProduct.name,
                     product_img: liveProduct.img,
                     product_price: price,
-                    total_amount: price,
-                    quantity: 1,
+                    total_amount: totalAmount,
+                    quantity: qty,
                     status: 'completed',
-                    product_unique_id: generatedProductId
+                    product_unique_id: generatedProductId,
+                    bill_number: billNumber
                 };
                 const { error: orderErr } = await _supabase.from('orders').insert([orderData]);
                 if(orderErr) { 
                     console.error('Order error:', orderErr);
-                    // rollback เงิน + stock
                     await _supabase.from('site_users').update({ balance: balance }).eq('id', currentUser.id);
                     if(newStock !== null) {
                         await _supabase.from('products').update({ stock: liveProduct.stock }).eq('id', liveProduct.id);
@@ -920,33 +935,71 @@ function togglePw(id, btn) {
                     }
                 }
                 
-                // อัปเดต balance ใน currentUser
                 currentUser.balance = newBalance;
                 this.updateUserUI();
 
-                // ===== UPDATE LOCAL CACHE ทันที (ไม่รอ fetchData) =====
-                // อัปเดต stock ใน db.products cache ทันทีเลย
                 if(newStock !== null) {
                     const cachedProd = this.db.products.find(p => p.id === liveProduct.id);
                     if(cachedProd) cachedProd.stock = newStock;
                 }
                 
-                // Re-render หน้า home แบบ silent (ถ้า home ถูกโหลดอยู่ใน DOM)
-                // เพื่อให้ stock card อัปเดตทันทีโดยไม่ต้องรีเฟรช
                 this._silentRefreshHomeStock(liveProduct.id, newStock);
-
                 await this.fetchData();
                 
-                
-                // ===== UPDATE DETAIL PAGE STOCK UI REAL-TIME (ไม่ต้อง reload) =====
                 if(newStock !== null) {
                     this._updateDetailStockUI({ ...liveProduct, stock: newStock });
                 }
                 
-                // Popup สำเร็จ
                 hideProcessing();
-                NotificationManager.success(`ສັ່ງຊື້ສຳເລັດ! ຫັກເງິນ ${price.toLocaleString()} ₭ | ຍອດຄົງເຫຼືອ: ${newBalance.toLocaleString()} ₭`);
+                
+                // ===== SHOW RECEIPT MODAL =====
+                this.showReceipt({
+                    billNumber,
+                    productName: liveProduct.name,
+                    productImg: liveProduct.img,
+                    price,
+                    qty,
+                    totalAmount,
+                    productUniqueId: generatedProductId,
+                    newBalance
+                });
             },
+
+            showReceipt: function(data) {
+                document.getElementById('receipt-bill-number').textContent = data.billNumber;
+                document.getElementById('receipt-img').src = data.productImg || '';
+                document.getElementById('receipt-product-name').textContent = data.productName || '';
+                document.getElementById('receipt-price-each').textContent = `${data.price.toLocaleString()} ₭ / ອັນ`;
+                document.getElementById('receipt-qty').textContent = data.qty + ' ອັນ';
+                document.getElementById('receipt-total').textContent = data.totalAmount.toLocaleString() + ' ₭';
+                // Product unique ID
+                const uidSection = document.getElementById('receipt-uid-section');
+                if(data.productUniqueId) {
+                    document.getElementById('receipt-uid').textContent = data.productUniqueId;
+                    uidSection.style.display = 'block';
+                } else {
+                    uidSection.style.display = 'none';
+                }
+                const overlay = document.getElementById('order-receipt-overlay');
+                const modal = document.getElementById('order-receipt-modal');
+                overlay.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        modal.style.transform = 'scale(1)';
+                        modal.style.opacity = '1';
+                    });
+                });
+            },
+
+            closeReceipt: function() {
+                const overlay = document.getElementById('order-receipt-overlay');
+                const modal = document.getElementById('order-receipt-modal');
+                modal.style.transform = 'scale(0.85)';
+                modal.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 350);
+            },
+
+
 
             // ===== BUY CONFIRM POPUP =====
             showBuyConfirm: function() {
@@ -957,11 +1010,18 @@ function togglePw(id, btn) {
                     NotificationManager.error('ສິນຄ້ານີ້ໝົດສະຕ໊ອກແລ້ວ');
                     return;
                 }
+                // Reset quantity
+                buyQty = 1;
+                document.getElementById('buy-confirm-qty').textContent = '1';
                 // Fill popup info
                 document.getElementById('buy-confirm-img').src = activeProduct.img || '';
                 document.getElementById('buy-confirm-name').textContent = activeProduct.name || '';
-                document.getElementById('buy-confirm-price').textContent = Number(activeProduct.price || 0).toLocaleString() + ' ₭';
+                const price = Number(activeProduct.price || 0);
+                document.getElementById('buy-confirm-price').textContent = price.toLocaleString() + ' ₭';
                 document.getElementById('buy-confirm-balance').textContent = Number(currentUser.balance || 0).toLocaleString() + ' ₭';
+                document.getElementById('buy-confirm-total').textContent = price.toLocaleString() + ' ₭';
+                // Update qty buttons state
+                this._updateQtyButtons();
                 // Show overlay
                 const overlay = document.getElementById('buy-confirm-overlay');
                 const sheet = document.getElementById('buy-confirm-sheet');
@@ -971,6 +1031,26 @@ function togglePw(id, btn) {
                 });
                 // Tap outside to close
                 overlay.onclick = (e) => { if(e.target === overlay) this.closeBuyConfirm(); };
+            },
+
+            changeQty: function(delta) {
+                if(!activeProduct) return;
+                const price = Number(activeProduct.price || 0);
+                const maxStock = (activeProduct.stock !== null && activeProduct.stock !== undefined) ? activeProduct.stock : 99;
+                const maxQty = Math.min(maxStock, 99);
+                buyQty = Math.max(1, Math.min(maxQty, buyQty + delta));
+                document.getElementById('buy-confirm-qty').textContent = buyQty;
+                document.getElementById('buy-confirm-total').textContent = (price * buyQty).toLocaleString() + ' ₭';
+                this._updateQtyButtons();
+            },
+
+            _updateQtyButtons: function() {
+                const minusBtn = document.getElementById('qty-minus-btn');
+                const plusBtn = document.getElementById('qty-plus-btn');
+                if(!minusBtn || !plusBtn) return;
+                const maxStock = (activeProduct && activeProduct.stock !== null && activeProduct.stock !== undefined) ? activeProduct.stock : 99;
+                minusBtn.style.opacity = buyQty <= 1 ? '0.4' : '1';
+                plusBtn.style.opacity = buyQty >= Math.min(maxStock, 99) ? '0.4' : '1';
             },
 
             closeBuyConfirm: function() {
@@ -1103,8 +1183,10 @@ function togglePw(id, btn) {
                     </div>
                     <div style="background:#111; padding:10px 12px; border-radius:10px; font-size:13px;">
                         <div style="margin-bottom:6px;"><span style="color:#aaa;">ສິນຄ້າ:</span> <b>${order.product_name || '-'}</b></div>
+                        <div style="margin-bottom:6px;"><span style="color:#aaa;">ຈຳນວນ:</span> <b>${order.quantity || 1} ອັນ</b></div>
                         <div style="margin-bottom:6px;"><span style="color:#aaa;">ລາຄາ:</span> ${priceHtml}</div>
-                        <div><span style="color:#aaa;">ເວລາສັ່ງຊື້:</span> ${dateStr}</div>
+                        <div style="margin-bottom:6px;"><span style="color:#aaa;">ເວລາສັ່ງຊື້:</span> ${dateStr}</div>
+                        ${order.bill_number ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #222;"><span style="color:#aaa; font-size:11px;">ເລກບິນ:</span> <span style="font-family:monospace; color:#888; font-size:11px;">${order.bill_number}</span></div>` : ''}
                     </div>
                     ${order.product_unique_id ? `
                     <div class="product-id-badge">
@@ -1146,11 +1228,12 @@ function togglePw(id, btn) {
                     const priceText = fromSpin
                         ? '<span style="color:#f5c518;font-size:11px;"><i class="fas fa-sync-alt" style="margin-right:3px;"></i>ໄດ້ຈາກວົງລໍ້</span>'
                         : `${Number(o.total_amount || o.product_price || 0).toLocaleString()} ₭`;
+                    const qtyBadge = (o.quantity && o.quantity > 1) ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa;font-size:10px;padding:1px 6px;border-radius:6px;margin-left:4px;">x${o.quantity}</span>` : '';
                     return `
                     <div class="history-item" style="display:flex; align-items:center; gap:12px; padding:12px; background:#111; border-radius:12px; margin-bottom:10px;">
                         <img src="${o.product_img || ''}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; flex-shrink:0;" onerror="this.src='https://via.placeholder.com/60x60?text=No+Img'">
                         <div style="flex:1; min-width:0;">
-                            <div style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${o.product_name || '-'}</div>
+                            <div style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${o.product_name || '-'}${qtyBadge}</div>
                             <div style="color:var(--main-red); font-size:13px; margin:3px 0;">${priceText}</div>
                             <div style="color:#888; font-size:11px;">${dateStr}</div>
                         </div>
@@ -3366,7 +3449,7 @@ function togglePw(id, btn) {
             loadProductIds: async function() {
                 const tbody = document.getElementById('t-product-ids');
                 if(!tbody) return;
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;"><i class="fas fa-spinner fa-spin"></i> ກຳລັງໂຫຼດ...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#aaa; padding:20px;"><i class="fas fa-spinner fa-spin"></i> ກຳລັງໂຫຼດ...</td></tr>';
                 const searchInput = document.getElementById('product-id-search');
                 if(searchInput) searchInput.value = '';
                 
@@ -3376,21 +3459,20 @@ function togglePw(id, btn) {
                     .not('product_unique_id', 'is', null)
                     .order('created_at', { ascending: false });
                 if(!orders || orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;">ຍັງບໍ່ມີລະຫັດສິນຄ້າ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#aaa; padding:20px;">ຍັງບໍ່ມີລະຫັດສິນຄ້າ</td></tr>';
                     const countEl = document.getElementById('product-id-count');
                     if(countEl) countEl.textContent = '';
                     return;
                 }
-                // Get user info
                 const userIds = [...new Set(orders.map(o => o.user_id))];
                 const { data: users } = await _supabase.from('site_users').select('id,username').in('id', userIds);
                 const userMap = {};
                 if(users) users.forEach(u => userMap[u.id] = u.username);
                 
-                // Store all data for search filtering
                 this._allProductIds = orders.map(o => ({
                     id: o.id,
                     uid: o.product_unique_id,
+                    bill: o.bill_number || '-',
                     product: o.product_name || '-',
                     buyer: userMap[o.user_id] || String(o.user_id),
                     date: o.created_at ? new Date(o.created_at).toLocaleDateString('lo-LA') : '-'
@@ -3404,13 +3486,16 @@ function togglePw(id, btn) {
                 const countEl = document.getElementById('product-id-count');
                 if(!tbody) return;
                 if(list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#aaa; padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>';
                     if(countEl) countEl.textContent = '';
                     return;
                 }
                 tbody.innerHTML = list.map(o => `
                     <tr>
-                        <td><span style="font-family:monospace; color:#60a5fa; font-weight:700; font-size:12px;">${o.uid}</span></td>
+                        <td>
+                            <span style="font-family:monospace; color:#60a5fa; font-weight:700; font-size:12px; display:block;">${o.uid}</span>
+                            <span style="font-family:monospace; color:#888; font-size:10px; display:block; margin-top:2px;">${o.bill}</span>
+                        </td>
                         <td style="font-size:12px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${o.product}">${o.product}</td>
                         <td style="font-size:12px; color:#ccc;">${o.buyer}</td>
                         <td style="font-size:11px; color:#aaa;">${o.date}</td>
@@ -3429,6 +3514,7 @@ function togglePw(id, btn) {
                 }
                 const filtered = this._allProductIds.filter(o =>
                     o.uid.toLowerCase().includes(q) ||
+                    (o.bill && o.bill.toLowerCase().includes(q)) ||
                     o.product.toLowerCase().includes(q) ||
                     o.buyer.toLowerCase().includes(q)
                 );

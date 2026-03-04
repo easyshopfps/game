@@ -88,6 +88,26 @@
                 <span id="buy-confirm-balance" style="color:#fff;font-weight:700;"></span>
             </div>
 
+            <!-- Quantity Selector -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#1a1a1a;border-radius:12px;margin-bottom:14px;border:1px solid #2a2a2a;">
+                <span style="font-size:13px;color:#aaa;"><i class="fas fa-boxes" style="color:#60a5fa;margin-right:6px;"></i>ຈຳນວນ</span>
+                <div style="display:flex;align-items:center;gap:0;">
+                    <button onclick="app.changeQty(-1)" id="qty-minus-btn" style="width:38px;height:38px;border:none;background:#e53935;color:#fff;border-radius:10px 0 0 10px;font-size:18px;font-weight:700;cursor:pointer;transition:background 0.15s;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-minus" style="font-size:12px;"></i>
+                    </button>
+                    <div id="buy-confirm-qty" style="width:52px;height:38px;background:#111;color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;border-top:1px solid #333;border-bottom:1px solid #333;">1</div>
+                    <button onclick="app.changeQty(1)" id="qty-plus-btn" style="width:38px;height:38px;border:none;background:#e53935;color:#fff;border-radius:0 10px 10px 0;font-size:18px;font-weight:700;cursor:pointer;transition:background 0.15s;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-plus" style="font-size:12px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Total price -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(229,57,53,0.08);border-radius:10px;margin-bottom:16px;border:1px solid rgba(229,57,53,0.2);">
+                <span style="font-size:13px;color:#aaa;">ລາຄາລວມທັງໝົດ</span>
+                <span id="buy-confirm-total" style="color:#e53935;font-size:20px;font-weight:800;"></span>
+            </div>
+
             <p style="text-align:center;font-size:13px;color:#777;margin-bottom:18px;">ທ່ານຕ້ອງການຊື້ສິນຄ້ານີ້ຫຼືບໍ່?</p>
 
             <div style="display:flex;gap:12px;">
@@ -110,6 +130,51 @@
                     <i class="fas fa-bolt"></i> ຢືນຢັນການສັ່ງຊື້
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== ORDER RECEIPT MODAL ===== -->
+    <div id="order-receipt-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);justify-content:center;align-items:center;padding:20px;">
+        <div id="order-receipt-modal" style="background:#161616;border-radius:24px;padding:32px 24px 28px;width:100%;max-width:420px;border:1px solid #2a2a2a;box-shadow:0 20px 60px rgba(0,0,0,0.8);transform:scale(0.85);opacity:0;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);">
+            <!-- Success Icon -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="width:72px;height:72px;background:linear-gradient(135deg,#00c853,#00e676);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(0,200,83,0.4);margin-bottom:14px;">
+                    <i class="fas fa-check" style="font-size:32px;color:#fff;"></i>
+                </div>
+                <div style="font-size:22px;font-weight:800;color:#00e676;margin-bottom:6px;">ສັ່ງຊື້ສຳເລັດ!</div>
+                <div id="receipt-bill-number" style="font-size:12px;color:#666;font-family:monospace;"></div>
+            </div>
+
+            <!-- Product Info -->
+            <div style="background:#111;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #222;">
+                <div style="font-size:12px;color:#666;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">ລາຍລະອຽດການສັ່ງຊື້</div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                    <img id="receipt-img" src="" style="width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid #333;">
+                    <div style="flex:1;">
+                        <div id="receipt-product-name" style="font-weight:700;font-size:14px;color:#fff;"></div>
+                        <div id="receipt-price-each" style="font-size:12px;color:#aaa;margin-top:2px;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:#aaa;margin-bottom:6px;">
+                    <span>ຈຳນວນ</span>
+                    <span id="receipt-qty" style="color:#fff;font-weight:600;"></span>
+                </div>
+                <div style="height:1px;background:#222;margin:8px 0;"></div>
+                <div style="display:flex;justify-content:space-between;font-size:15px;">
+                    <span style="color:#aaa;">ລາຄາລວມ</span>
+                    <span id="receipt-total" style="color:#e53935;font-weight:800;font-size:18px;"></span>
+                </div>
+            </div>
+
+            <!-- Product Unique ID (if any) -->
+            <div id="receipt-uid-section" style="display:none;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:12px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:11px;color:#60a5fa;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><i class="fas fa-id-badge"></i> ລະຫັດສິນຄ້າຂອງທ່ານ</div>
+                <div id="receipt-uid" style="font-family:monospace;font-size:15px;font-weight:700;color:#fff;word-break:break-all;"></div>
+            </div>
+
+            <button onclick="app.closeReceipt()" style="width:100%;padding:16px;border:none;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans Lao',sans-serif;box-shadow:0 4px 20px rgba(229,57,53,0.4);">
+                <i class="fas fa-check-circle"></i> ຮັບທາບ
+            </button>
         </div>
     </div>
 
