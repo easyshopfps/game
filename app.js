@@ -476,16 +476,29 @@ function togglePw(id, btn) {
                 app.renderAdmin(); 
             },
             show: (id) => {
+                // หน้าที่ต้องซ่อน header + bottom nav (full-screen mode)
+                const FULLSCREEN_VIEWS = ['view-buy-confirm', 'view-receipt'];
                 // เฉพาะหน้าหลักที่ควรมี page transition
                 const MAIN_VIEWS = ['view-home', 'view-list', 'view-detail'];
                 const active = document.querySelector('.page-view:not(.hidden)');
                 const useTransition = MAIN_VIEWS.includes(id) && active && active.id !== id && MAIN_VIEWS.includes(active.id);
+
+                const header = document.querySelector('header');
+                const mobileNav = document.querySelector('.mobile-nav');
 
                 const doShow = () => {
                     if(active && active.id !== id) router.history.push(active.id);
                     document.querySelectorAll('.page-view').forEach(v => v.classList.add('hidden'));
                     document.getElementById(id).classList.remove('hidden');
                     window.scrollTo(0, 0);
+                    // ซ่อน/แสดง header + bottom nav
+                    if(FULLSCREEN_VIEWS.includes(id)) {
+                        if(header) header.style.display = 'none';
+                        if(mobileNav) mobileNav.style.display = 'none';
+                    } else {
+                        if(header) header.style.display = '';
+                        if(mobileNav) mobileNav.style.display = '';
+                    }
                 };
 
                 const mask = document.getElementById('page-transition-mask');
@@ -503,11 +516,15 @@ function togglePw(id, btn) {
             },
             back: () => {
                 const prev = router.history.pop() || 'view-home';
-                // กดกลับไม่ต้องมี transition — ให้รู้สึก instant
                 const active = document.querySelector('.page-view:not(.hidden)');
                 document.querySelectorAll('.page-view').forEach(v => v.classList.add('hidden'));
                 document.getElementById(prev).classList.remove('hidden');
                 window.scrollTo(0, 0);
+                // restore header + nav เสมอเมื่อกลับ
+                const header = document.querySelector('header');
+                const mobileNav = document.querySelector('.mobile-nav');
+                if(header) header.style.display = '';
+                if(mobileNav) mobileNav.style.display = '';
             }
         };
 
@@ -1005,8 +1022,8 @@ function togglePw(id, btn) {
             },
 
             goToOrderHistory: function() {
-                router.show('view-profile');
-                setTimeout(() => { this.openModal('order-history-modal'); this.renderOrderHistory(); }, 200);
+                router.show('view-order-history');
+                this.renderOrderHistory();
             },
 
             // ===== BUY CONFIRM (Full-screen page) =====
