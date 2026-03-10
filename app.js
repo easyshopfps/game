@@ -909,7 +909,10 @@ function togglePw(id, btn) {
                     activeProduct.stock = newStock;
                 }
                 
-                // Generate product unique ID
+                // Generate Bill Number (1 bill ต่อการสั่งซื้อ 1 ครั้ง)
+                const billNumber = this._generateBillNumber();
+
+                // Generate product unique ID (1 ID ต่อ 1 การซื้อ ระบุจำนวนใน record)
                 let generatedProductId = null;
                 if(liveProduct.has_product_id) {
                     const ts = Date.now().toString(36).toUpperCase();
@@ -917,10 +920,7 @@ function togglePw(id, btn) {
                     generatedProductId = 'EZ-' + ts + '-' + rand;
                 }
 
-                // Generate Bill Number
-                const billNumber = this._generateBillNumber();
-                
-                // บันทึก order
+                // บันทึก 1 row รวม qty ไว้ใน record เดียว
                 const orderData = {
                     user_id: currentUser.id,
                     product_id: liveProduct.id,
@@ -945,15 +945,15 @@ function togglePw(id, btn) {
                     return; 
                 }
                 
-                // จำกัด 10 ประวัติต่อ user
+                // อัปเดต limit ประวัติ
                 const { data: userOrders } = await _supabase
                     .from('orders')
                     .select('id, created_at')
                     .eq('user_id', currentUser.id)
                     .order('created_at', { ascending: true });
                 
-                if(userOrders && userOrders.length > 10) {
-                    const toDelete = userOrders.slice(0, userOrders.length - 10);
+                if(userOrders && userOrders.length > 20) {
+                    const toDelete = userOrders.slice(0, userOrders.length - 20);
                     for(const o of toDelete) {
                         await _supabase.from('orders').delete().eq('id', o.id);
                     }
@@ -976,7 +976,8 @@ function togglePw(id, btn) {
                 
                 hideProcessing();
                 
-                // ===== SHOW RECEIPT MODAL =====
+                // ใบเสร็จ
+                const firstProductId = generatedProductId;
                 this.showReceipt({
                     billNumber,
                     productName: liveProduct.name,
@@ -984,7 +985,7 @@ function togglePw(id, btn) {
                     price,
                     qty,
                     totalAmount,
-                    productUniqueId: generatedProductId,
+                    productUniqueId: firstProductId,
                     newBalance
                 });
             },
@@ -1203,19 +1204,24 @@ function togglePw(id, btn) {
                     <div style="text-align:center; margin-bottom:10px;">
                         <img src="${order.product_img || ''}" style="width:72px; height:72px; object-fit:cover; border-radius:8px;">
                     </div>
+                    ${order.bill_number ? `
+                    <div style="background:#1a1a1a; border:1px solid #2a2a2a; border-radius:8px; padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-receipt" style="color:#aaa; font-size:12px;"></i>
+                        <span style="color:#aaa; font-size:11px;">ເລກບິນ:</span>
+                        <span style="font-family:monospace; color:#ccc; font-size:10px; font-weight:600; word-break:break-all;">${order.bill_number}</span>
+                    </div>` : ''}
                     <div style="background:#111; padding:10px 12px; border-radius:10px; font-size:13px;">
                         <div style="margin-bottom:6px;"><span style="color:#aaa;">ສິນຄ້າ:</span> <b>${order.product_name || '-'}</b></div>
                         <div style="margin-bottom:6px;"><span style="color:#aaa;">ຈຳນວນ:</span> <b>${order.quantity || 1} ອັນ</b></div>
                         <div style="margin-bottom:6px;"><span style="color:#aaa;">ລາຄາ:</span> ${priceHtml}</div>
-                        <div style="margin-bottom:6px;"><span style="color:#aaa;">ເວລາສັ່ງຊື້:</span> ${dateStr}</div>
-                        ${order.bill_number ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #222;"><span style="color:#aaa; font-size:11px;">ເລກບິນ:</span> <span style="font-family:monospace; color:#888; font-size:11px;">${order.bill_number}</span></div>` : ''}
+                        <div><span style="color:#aaa;">ເວລາສັ່ງຊື້:</span> ${dateStr}</div>
                     </div>
                     ${order.product_unique_id ? `
-                    <div class="product-id-badge">
+                    <div class="product-id-badge" style="margin-top:10px;">
                         <div class="id-icon"><i class="fas fa-id-badge"></i></div>
                         <div class="id-text" style="flex:1;min-width:0;">
-                            <div class="id-label">🔑 ລະຫັດສິນຄ້າຂອງທ່ານ</div>
-                            <div class="id-value">${order.product_unique_id}</div>
+                            <div class="id-label">🔑 ລະຫັດສິນຄ້າ${(order.quantity && order.quantity > 1) ? ` (x${order.quantity} ອັນ)` : ''}</div>
+                            <div class="id-value" style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${order.product_unique_id}</div>
                         </div>
                         <button onclick="app.copyProductId('${order.product_unique_id}')" id="copy-pid-btn" style="padding:8px 12px;border:none;background:#1e3a5f;color:#60a5fa;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Noto Sans Lao',sans-serif;margin-left:10px;">
                             <i class="fas fa-copy"></i> ຄັດລອກ
@@ -3508,8 +3514,8 @@ function togglePw(id, btn) {
                 this._allProductIds = orders.map(o => ({
                     id: o.id,
                     uid: o.product_unique_id,
-                    bill: o.bill_number || '-',
                     product: o.product_name || '-',
+                    qty: o.quantity || 1,
                     buyer: userMap[o.user_id] || String(o.user_id),
                     date: o.created_at ? new Date(o.created_at).toLocaleDateString('lo-LA') : '-'
                 }));
@@ -3522,15 +3528,17 @@ function togglePw(id, btn) {
                 const countEl = document.getElementById('product-id-count');
                 if(!tbody) return;
                 if(list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#aaa; padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>';
                     if(countEl) countEl.textContent = '';
                     return;
                 }
                 tbody.innerHTML = list.map(o => `
                     <tr>
-                        <td>
-                            <span style="font-family:monospace; color:#60a5fa; font-weight:700; font-size:12px; display:block;">${o.uid}</span>
-                            <span style="font-family:monospace; color:#888; font-size:10px; display:block; margin-top:2px;">${o.bill}</span>
+                        <td style="max-width:160px;">
+                            <div style="display:flex;align-items:center;gap:5px;overflow:hidden;">
+                                <span style="font-family:monospace; color:#60a5fa; font-weight:700; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" title="${o.uid}">${o.uid}</span>
+                                ${o.qty > 1 ? `<span style="flex-shrink:0;background:rgba(229,57,53,0.2);color:#ff6b6b;font-size:10px;padding:1px 6px;border-radius:6px;font-weight:700;white-space:nowrap;">x${o.qty}</span>` : ''}
+                            </div>
                         </td>
                         <td style="font-size:12px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${o.product}">${o.product}</td>
                         <td style="font-size:12px; color:#ccc;">${o.buyer}</td>
@@ -3544,13 +3552,9 @@ function togglePw(id, btn) {
             filterProductIds: function(query) {
                 if(!this._allProductIds) return;
                 const q = query.toLowerCase().trim();
-                if(!q) {
-                    this._renderProductIdsTable(this._allProductIds);
-                    return;
-                }
+                if(!q) { this._renderProductIdsTable(this._allProductIds); return; }
                 const filtered = this._allProductIds.filter(o =>
                     o.uid.toLowerCase().includes(q) ||
-                    (o.bill && o.bill.toLowerCase().includes(q)) ||
                     o.product.toLowerCase().includes(q) ||
                     o.buyer.toLowerCase().includes(q)
                 );
@@ -3609,7 +3613,7 @@ function togglePw(id, btn) {
                 }
                 tbody.innerHTML = list.map(o => `
                     <tr>
-                        <td><span style="font-family:monospace;color:#a78bfa;font-weight:700;font-size:11px;">${o.bill}</span></td>
+                        <td><span style="font-family:monospace;color:#ccc;font-weight:600;font-size:11px;">${o.bill}</span></td>
                         <td style="font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.product}">${o.product}</td>
                         <td style="font-size:12px;color:#ccc;text-align:center;">${o.qty}</td>
                         <td style="font-size:12px;color:#e53935;font-weight:600;">${o.total.toLocaleString()} ₭</td>
