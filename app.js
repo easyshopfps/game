@@ -569,7 +569,6 @@ function togglePw(id, btn) {
                 this.renderHome();
 
                 this.loading(false);
-                localStorage.removeItem('adminLogin');
 
                 // รอรูป category แรกโหลดเสร็จก่อน แล้วค่อยปิด loading
                 const _hideLoading = () => {
@@ -609,13 +608,11 @@ function togglePw(id, btn) {
 
                 // PHASE 2: โหลดส่วนที่เหลือ background ไม่บล็อก UI
                 Promise.all([
-                    _supabase.from('users').select('*'),
                     _supabase.from('site_users').select('*').order('created_at', { ascending: false }),
                     _supabase.from('redeem_codes').select('*'),
                     _supabase.from('topup_requests').select('*').order('created_at', { ascending: false }),
                     _supabase.from('orders').select('*').order('created_at', { ascending: false }),
-                ]).then(([usRes, suRes, codeRes, topupRes, orderRes]) => {
-                    if(usRes.data) this.db.users = usRes.data;
+                ]).then(([suRes, codeRes, topupRes, orderRes]) => {
                     if(suRes.data) this.db.site_users = suRes.data;
                     if(codeRes.data) this.db.redeem_codes = codeRes.data;
                     if(topupRes.data) this.db.topup_requests = topupRes.data;
@@ -628,12 +625,10 @@ function togglePw(id, btn) {
             loading: (show) => document.getElementById('loader').style.display = show ? 'block' : 'none',
 
             fetchData: async function() {
-                // โหลดทุกอย่างพร้อมกัน (parallel) แทน sequential
-                const [stR, ctR, pdR, usR, suR, popR, codeR, topupR, orderR, hotR] = await Promise.all([
+                const [stR, ctR, pdR, suR, popR, codeR, topupR, orderR, hotR] = await Promise.all([
                     _supabase.from('settings').select('*').eq('id', 1).maybeSingle(),
                     _supabase.from('categories').select('*'),
                     _supabase.from('products').select('*').order('created_at', { ascending: false }),
-                    _supabase.from('users').select('*'),
                     _supabase.from('site_users').select('*').order('created_at', { ascending: false }),
                     _supabase.from('popups').select('*').order('order', { ascending: true }),
                     _supabase.from('redeem_codes').select('*'),
@@ -644,7 +639,6 @@ function togglePw(id, btn) {
                 if(stR.data && stR.data.data) this.db.settings = stR.data.data;
                 if(ctR.data) this.db.categories = ctR.data;
                 if(pdR.data) this.db.products = pdR.data;
-                if(usR.data) this.db.users = usR.data;
                 if(suR.data) this.db.site_users = suR.data;
                 if(popR.data) this.db.popups = popR.data;
                 if(codeR.data) this.db.redeem_codes = codeR.data;
@@ -814,7 +808,6 @@ function togglePw(id, btn) {
 
             handleSearch: function(e) {
                 const val = e.target.value.trim().toLowerCase();
-                if(val === "khoudadmin") { e.target.value=""; this.openModal('login-modal'); return; }
                 if(e.key === 'Enter' && val) {
                     const hotIds = this.db.hot_deals.products || [];
                     const res = this.db.products.filter(p => p.name.toLowerCase().includes(val));
@@ -841,151 +834,87 @@ function togglePw(id, btn) {
 
                 const qty = buyQty || 1;
 
-                // ===== CHECK LIVE STOCK FROM DATABASE BEFORE PURCHASE =====
-                showProcessing('ກຳລັງກວດສອບຂໍ້ມູນ...');
-                
-                const { data: liveProduct, error: fetchErr } = await _supabase
-                    .from('products')
-                    .select('*')
-                    .eq('id', activeProduct.id)
-                    .single();
-                
-                if(fetchErr || !liveProduct) {
-                    hideProcessing();
-                    NotificationManager.error('ບໍ່ສາມາດດຶງຂໍ້ມູນສິນຄ້າໄດ້ ກະລຸນາລອງໃໝ່');
-                    return;
-                }
-
-                activeProduct = liveProduct;
-
-                // Check stock (must have enough for qty)
-                if(liveProduct.stock !== null && liveProduct.stock !== undefined) {
-                    if(liveProduct.stock <= 0) {
-                        hideProcessing();
-                        NotificationManager.error('ສິນຄ້ານີ້ໝົດສະຕ໊ອກແລ້ວ!');
-                        this._updateDetailStockUI(liveProduct);
-                        return;
-                    }
-                    if(liveProduct.stock < qty) {
-                        hideProcessing();
-                        NotificationManager.error(`ສະຕ໊ອກບໍ່ພຽງພໍ! ເຫຼືອ ${liveProduct.stock} ອັນ`);
-                        return;
-                    }
-                }
-
-                // Fetch latest user balance
-                const { data: liveUser } = await _supabase
-                    .from('site_users')
-                    .select('balance')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                const balance = liveUser ? (liveUser.balance || 0) : (currentUser.balance || 0);
-                const price = liveProduct.price || 0;
-                const totalAmount = price * qty;
-                
-                if(balance < totalAmount) {
-                    hideProcessing();
-                    NotificationManager.error(`ຍອດເງິນບໍ່ພຽງພໍ! ຍອດຄົງເຫຼືອ: ${balance.toLocaleString()} ₭ (ຕ້ອງການ: ${totalAmount.toLocaleString()} ₭)`);
-                    return;
-                }
-                
                 showProcessing('ກຳລັງດຳເນີນການສັ່ງຊື້<br>ກະລຸນາລໍຖ້າ ຢ່າປິດໜ້ານີ້...');
-                const newBalance = balance - totalAmount;
-                const { error: balErr } = await _supabase.from('site_users').update({ balance: newBalance }).eq('id', currentUser.id);
-                if(balErr) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + balErr.message); return; }
-                
-                // ลด stock
-                let newStock = null;
-                if(liveProduct.stock !== null && liveProduct.stock !== undefined && liveProduct.stock > 0) {
-                    newStock = liveProduct.stock - qty;
-                    const { error: stockErr } = await _supabase.from('products').update({ stock: newStock }).eq('id', liveProduct.id);
-                    if(stockErr) {
-                        await _supabase.from('site_users').update({ balance: balance }).eq('id', currentUser.id);
-                        hideProcessing();
-                        NotificationManager.error('ເກີດຂໍ້ຜິດພາດໃນການອັພເດດສະຕ໊ອກ');
-                        return;
-                    }
-                    activeProduct.stock = newStock;
-                }
-                
-                // Generate Bill Number (1 bill ต่อการสั่งซื้อ 1 ครั้ง)
-                const billNumber = this._generateBillNumber();
 
-                // Generate product unique ID (1 ID ต่อ 1 การซื้อ ระบุจำนวนใน record)
+                // ── Generate bill + product ID ຝ່ັງ client (ສົ່ງໄປໃຫ້ RPC ເກັບ) ──
+                const billNumber = this._generateBillNumber();
                 let generatedProductId = null;
-                if(liveProduct.has_product_id) {
+                if(activeProduct.has_product_id) {
                     const ts = Date.now().toString(36).toUpperCase();
                     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
                     generatedProductId = 'EZ-' + ts + '-' + rand;
                 }
 
-                // บันทึก 1 row รวม qty ไว้ใน record เดียว
-                const orderData = {
-                    user_id: currentUser.id,
-                    product_id: liveProduct.id,
-                    product_name: liveProduct.name,
-                    product_img: liveProduct.img,
-                    product_price: price,
-                    total_amount: totalAmount,
-                    quantity: qty,
-                    status: 'completed',
-                    product_unique_id: generatedProductId,
-                    bill_number: billNumber
-                };
-                const { error: orderErr } = await _supabase.from('orders').insert([orderData]);
-                if(orderErr) { 
-                    console.error('Order error:', orderErr);
-                    await _supabase.from('site_users').update({ balance: balance }).eq('id', currentUser.id);
-                    if(newStock !== null) {
-                        await _supabase.from('products').update({ stock: liveProduct.stock }).eq('id', liveProduct.id);
-                    }
+                // ── ເອີ້ນ RPC — ທຸກການຄຳນວນ, ກວດ stock/balance, ຫັກເງິນ ຢູ່ Database ──
+                const { data: rpcResult, error: rpcErr } = await _supabase.rpc('process_purchase', {
+                    p_user_id:    currentUser.id,
+                    p_product_id: activeProduct.id,
+                    p_qty:        qty,
+                    p_bill_no:    billNumber,
+                    p_prod_uid:   generatedProductId
+                });
+
+                if(rpcErr) {
                     hideProcessing();
-                    NotificationManager.error('ເກີດຂໍ້ຜິດພາດໃນການສັ່ງຊື້: ' + orderErr.message); 
-                    return; 
+                    NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + rpcErr.message);
+                    return;
                 }
-                
-                // อัปเดต limit ประวัติ
-                const { data: userOrders } = await _supabase
-                    .from('orders')
-                    .select('id, created_at')
-                    .eq('user_id', currentUser.id)
-                    .order('created_at', { ascending: true });
-                
-                if(userOrders && userOrders.length > 20) {
-                    const toDelete = userOrders.slice(0, userOrders.length - 20);
-                    for(const o of toDelete) {
-                        await _supabase.from('orders').delete().eq('id', o.id);
-                    }
+
+                const result = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+
+                if(!result || !result.ok) {
+                    hideProcessing();
+                    NotificationManager.error(result?.error || 'ການສັ່ງຊື້ລົ້ມເຫຼວ');
+                    // refresh stock UI ໃຫ້ຖືກຕ້ອງ
+                    const { data: freshProd } = await _supabase.from('products').select('*').eq('id', activeProduct.id).single();
+                    if(freshProd) this._updateDetailStockUI(freshProd);
+                    return;
                 }
-                
+
+                // ── ອັບເດດ UI ດ້ວຍຄ່າຈາກ DB ──
+                const newBalance = result.new_balance;
+                const newStock   = result.new_stock;
+                const price      = result.price;
+                const totalAmount = result.total;
+
                 currentUser.balance = newBalance;
                 this.updateUserUI();
 
-                if(newStock !== null) {
-                    const cachedProd = this.db.products.find(p => p.id === liveProduct.id);
+                if(newStock !== null && newStock !== undefined) {
+                    activeProduct.stock = newStock;
+                    const cachedProd = this.db.products.find(p => p.id === activeProduct.id);
                     if(cachedProd) cachedProd.stock = newStock;
+                    this._silentRefreshHomeStock(activeProduct.id, newStock);
                 }
-                
-                this._silentRefreshHomeStock(liveProduct.id, newStock);
+
+                // ── ລຶບ order ເກົ່າ limit 20 ──
+                const { data: userOrders } = await _supabase
+                    .from('orders').select('id, created_at')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: true });
+                if(userOrders && userOrders.length > 20) {
+                    const toDelete = userOrders.slice(0, userOrders.length - 20);
+                    for(const o of toDelete) await _supabase.from('orders').delete().eq('id', o.id);
+                }
+
                 await this.fetchData();
-                
-                if(newStock !== null) {
-                    this._updateDetailStockUI({ ...liveProduct, stock: newStock });
+
+                if(newStock !== null && newStock !== undefined) {
+                    this._updateDetailStockUI({ ...activeProduct, stock: newStock });
                 }
-                
+
                 hideProcessing();
                 
                 // ใบเสร็จ
                 const firstProductId = generatedProductId;
                 this.showReceipt({
                     billNumber,
-                    productName: liveProduct.name,
-                    productImg: liveProduct.img,
+                    productName: result.prod_name || activeProduct.name,
+                    productImg:  result.prod_img  || activeProduct.img,
                     price,
                     qty,
                     totalAmount,
-                    productUniqueId: firstProductId,
+                    productUniqueId: (result.has_prod_id || activeProduct.has_product_id) ? firstProductId : null,
                     newBalance
                 });
             },
@@ -1548,18 +1477,15 @@ function togglePw(id, btn) {
                     </tr>
                 `).join('');
 
-                document.getElementById('t-users').innerHTML = this.db.users.map(u => `
-                    <tr><td>${u.username}</td><td>${u.password}</td><td><i class="fas fa-trash" style="cursor:pointer;" onclick="app.delU(${u.id})"></i></td></tr>
-                `).join('');
-
                 // Members tab
                 document.getElementById('t-members').innerHTML = (this.db.site_users || []).map(u => `
                     <tr onclick="app.selectMember(${u.id})" style="cursor:pointer;">
                         <td>${u.id}</td>
                         <td>${u.username}</td>
-                        <td>${Number(u.balance || 0).toLocaleString()} ₭</td>
-                        <td>${u.status === 'active' ? '<span style="color:#00cc88">ເປີດໃຊ້</span>' : '<span style="color:#ff4444">ລະງັບ</span>'}</td>
-                        <td>${new Date(u.created_at).toLocaleDateString('lo-LA')}</td>
+                        <td style="color:#00cc88;">${Number(u.balance || 0).toLocaleString()} ₭</td>
+                        <td>${u.is_admin ? '<span style="color:#ff4444">🔑</span>' : '<span style="color:#555">—</span>'}</td>
+                        <td>${u.status === 'active' ? '<span style="color:#00cc88">✅</span>' : '<span style="color:#ff4444">🚫</span>'}</td>
+                        <td style="color:var(--text-dim);font-size:11px;">${new Date(u.created_at).toLocaleDateString('lo-LA')}</td>
                     </tr>
                 `).join('');
 
@@ -1718,17 +1644,20 @@ function togglePw(id, btn) {
 
             updateMember: async function() {
                 const id = document.getElementById('member-id').value;
+                const isAdminVal = document.getElementById('member-is-admin').value === 'true';
                 const data = {
-                    balance: parseInt(document.getElementById('member-balance').value) || 0,
+                    balance:     parseInt(document.getElementById('member-balance').value) || 0,
                     total_spent: parseInt(document.getElementById('member-spent').value) || 0,
-                    status: document.getElementById('member-status').value
+                    status:      document.getElementById('member-status').value,
+                    is_admin:    isAdminVal
                 };
-                
+
                 const { error } = await _supabase.from('site_users').update(data).eq('id', id);
                 if(error) NotificationManager.error(error.message);
                 else {
                     NotificationManager.success('ອັບເດດຂໍ້ມູນສຳເລັດ');
-                    this.loadAllMembers();
+                    await this.fetchData();
+                    this.renderAdmin();
                     document.getElementById('member-edit-form').style.display = 'none';
                 }
             },
@@ -1772,6 +1701,7 @@ function togglePw(id, btn) {
                     document.getElementById('member-balance').value = data.balance || 0;
                     document.getElementById('member-spent').value = data.total_spent || 0;
                     document.getElementById('member-status').value = data.status || 'active';
+                    document.getElementById('member-is-admin').value = data.is_admin ? 'true' : 'false';
                     document.getElementById('member-edit-form').style.display = 'block';
                 }
             },
@@ -1801,19 +1731,14 @@ function togglePw(id, btn) {
             },
 
             resetMemberPassword: async function() {
-                if(!await CustomConfirm.show('ແນ່ໃຈບໍ່ວ່າຕ້ອງການຣີເຊັດລະຫັດຜ່ານ?', {title:'ຣີເຊັດລະຫັດຜ່ານ', icon:'fa-key'})) return;
-                
-                const id = document.getElementById('member-id').value;
-                const newPassword = '123456';
-                // ສ້າງ token ໃໝ່ force logout ທຸກ device
-                const newToken = Date.now().toString(36) + Math.random().toString(36).substring(2);
-                
-                const { error } = await _supabase.from('site_users').update({ 
-                    password: newPassword,
-                    session_token: newToken
-                }).eq('id', id);
+                if(!await CustomConfirm.show('ຣີເຊັດລະຫັດຜ່ານເປັນ 123456?', {title:'ຣີເຊັດລະຫັດຜ່ານ', icon:'fa-key'})) return;
+                const memberId = document.getElementById('member-id').value;
+                const { error } = await _supabase.rpc('admin_reset_password', {
+                    p_user_id: parseInt(memberId),
+                    p_new_password: '123456'
+                });
                 if(error) NotificationManager.error(error.message);
-                else NotificationManager.success('ຣີເຊັດລະຫັດຜ່ານສຳເລັດ! ລະຫັດໃໝ່: 123456 (User ຈະຖືກ Logout ອັດຕະໂນມັດ)');
+                else NotificationManager.success('ຣີເຊັດລະຫັດຜ່ານສຳເລັດ! ລະຫັດໃໝ່: 123456');
             },
 
             saveProduct: async function() {
@@ -2061,22 +1986,55 @@ function togglePw(id, btn) {
                 `).join('');
             },
 
-            saveUser: async function() {
-                const username = document.getElementById('u-user').value;
-                const password = document.getElementById('u-pass').value;
-                if(!username || !password) return;
-                const { error } = await _supabase.from('users').insert([{ username, password }]);
-                if(error) { NotificationManager.error(error.message); return; }
-                NotificationManager.success('ເພີ່ມ Admin ສຳເລັດ!');
-                document.getElementById('u-user').value = '';
-                document.getElementById('u-pass').value = '';
-                await this.fetchData();
-                this.renderAdmin();
+            // ── ຈັດການສິດ Admin (ໃຊ້ site_users.is_admin) ──
+            searchAdminUsers: async function() {
+                const q = (document.getElementById('admin-search-user')?.value || '').trim();
+                if(!q) { document.getElementById('admin-user-results').innerHTML = ''; return; }
+
+                const { data: users } = await _supabase
+                    .from('site_users')
+                    .select('id, username, is_admin, avatar_url')
+                    .ilike('username', `%${q}%`)
+                    .limit(10);
+
+                const box = document.getElementById('admin-user-results');
+                if(!users || !users.length) { box.innerHTML = '<p style="color:var(--text-dim);padding:10px;">ບໍ່ພົບຜູ້ໃຊ້</p>'; return; }
+
+                box.innerHTML = users.map(u => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#1a1a1a;border-radius:8px;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="${u.avatar_url || 'https://img5.pic.in.th/file/secure-sv1/17710495907562b12906e5c4d2a54.png'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                            <div>
+                                <div style="font-weight:600;font-size:14px;">${u.username}</div>
+                                <div style="font-size:11px;color:${u.is_admin ? '#ff4444' : 'var(--text-dim)'};">${u.is_admin ? '🔑 Admin' : 'ສະມາຊິກທົ່ວໄປ'}</div>
+                            </div>
+                        </div>
+                        <button onclick="app.toggleAdmin(${u.id}, ${u.is_admin})"
+                            style="padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;
+                            background:${u.is_admin ? '#333' : '#ff4444'};color:#fff;">
+                            ${u.is_admin ? 'ຖອດສິດ Admin' : 'ໃຫ້ສິດ Admin'}
+                        </button>
+                    </div>
+                `).join('');
+            },
+
+            toggleAdmin: async function(userId, currentIsAdmin) {
+                const action = currentIsAdmin ? 'ຖອດສິດ Admin' : 'ໃຫ້ສິດ Admin';
+                if(!await CustomConfirm.show(`${action} ຜູ້ໃຊ້ນີ້?`, {title: action, icon: 'fa-user-shield'})) return;
+
+                const { error } = await _supabase
+                    .from('site_users')
+                    .update({ is_admin: !currentIsAdmin })
+                    .eq('id', userId);
+
+                if(error) { NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + error.message); return; }
+                NotificationManager.success(action + ' ສຳເລັດ!');
+                this.searchAdminUsers(); // refresh list
             },
 
             delP: async function(id) { if(await CustomConfirm.show('ລົບສິນຄ້ານີ້?', {title:'ລົບສິນຄ້າ', icon:'fa-trash'})) { await _supabase.from('products').delete().eq('id', id); NotificationManager.success('ລົບສິນຄ້າສຳເລັດ!'); await this.fetchData(); this.renderAdmin(); } },
             delC: async function(id) { if(await CustomConfirm.show('ລົບໝວດໝູ່ນີ້?', {title:'ລົບໝວດໝູ່', icon:'fa-trash'})) { await _supabase.from('categories').delete().eq('id', id); NotificationManager.success('ລົບໝວດໝູ່ສຳເລັດ!'); await this.fetchData(); this.renderAdmin(); } },
-            delU: async function(id) { if(await CustomConfirm.show('ລົບ Admin ນີ້?', {title:'ລົບ Admin', icon:'fa-trash'})) { await _supabase.from('users').delete().eq('id', id); NotificationManager.success('ລົບ Admin ສຳເລັດ!'); await this.fetchData(); this.renderAdmin(); } },
+
 
             editP: function(id) {
                 const p = this.db.products.find(x => x.id == id);
@@ -2104,23 +2062,7 @@ function togglePw(id, btn) {
                 window.scrollTo(0,0);
             },
 
-            login: function() {
-                const u = document.getElementById('log-u').value;
-                const p = document.getElementById('log-p').value;
-                const admin = this.db.users.find(x => x.username === u && x.password === p);
-                if(admin || (u === "khoud" && p === "khoud123@")) {
-                    localStorage.setItem('adminLogin','true');
-                    this.closeModal('login-modal');
-                    router.admin();
-                } else { NotificationManager.error('User ຫຼື Pass ຜິດ!'); }
-            },
-
-            logout: function() {
-                localStorage.removeItem('adminLogin');
-                router.home();
-            },
-
-            // ===== HOT DEALS FUNCTIONS =====
+            // ========= HOT DEALS FUNCTIONS =====
             loadHotItems: function() {
                 // reset selection
                 document.getElementById('hot-item').value = '';
@@ -2384,94 +2326,30 @@ function togglePw(id, btn) {
             },
 
             redeemCode: async function() {
-                if(!currentUser) {
-                    NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ');
-                    return;
-                }
-                
+                if(!currentUser) { NotificationManager.warning('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ'); return; }
                 const code = document.getElementById('redeem-code').value.trim();
-                if(!code) {
-                    NotificationManager.warning('ກະລຸນາໃສ່ໂຄດ');
-                    return;
-                }
-                
-                // ตรวจสอบโค้ด (ไม่ใช้ .eq('used', false) แล้ว)
-                showProcessing('ກຳລັງກວດສອບໂຄດ<br>ກະລຸນາລໍຖ້າ...');
-                const { data: redeemCode } = await _supabase
-                    .from('redeem_codes')
-                    .select('*')
-                    .eq('code', code)
-                    .or('is_active.is.null,is_active.eq.true')
-                    .single();
-                    
-                if(!redeemCode) {
-                    hideProcessing();
-                    NotificationManager.error('ໂຄດບໍ່ຖືກຕ້ອງ ຫຼື ໝົດອາຍຸແລ້ວ');
-                    return;
-                }
-                
-                // ตรวจสอบวันหมดอายุ (ถ้ามี)
-                if(redeemCode.expiry && new Date(redeemCode.expiry) < new Date()) {
-                    // ลบโค้ดที่หมดอายุ
-                    await _supabase.from('redeem_codes').delete().eq('id', redeemCode.id);
-                    hideProcessing();
-                    NotificationManager.error('ໂຄດໝົດອາຍຸແລ້ວ');
-                    return;
-                }
-                
-                // ตรวจสอบว่าใช้ครบหรือยัง
-                const currentUses = redeemCode.current_uses || 0;
-                const maxUses = redeemCode.max_uses || 1;
-                if(currentUses >= maxUses) {
-                    hideProcessing();
-                    NotificationManager.error('ໂຄດນີ້ຖືກໃຊ້ຄົບແລ້ວ');
-                    return;
-                }
-                
-                // ตรวจสอบว่าคนนี้เคยใช้แล้วหรือยัง
-                const { data: existingUse } = await _supabase
-                    .from('code_redemptions')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .eq('code_id', redeemCode.id)
-                    .maybeSingle();
-                
-                if(existingUse) {
-                    hideProcessing();
-                    NotificationManager.error('ທ່ານເຄີຍໃຊ້ໂຄ້ດນີ້ໄປແລ້ວ');
-                    return;
-                }
-                
-                // บันทึกประวัติการใช้โค้ด ก่อนเสมอ (ป้องกัน race condition)
-                await _supabase.from('code_redemptions').insert([{
-                    user_id: currentUser.id,
-                    code_id: redeemCode.id,
-                    amount: redeemCode.amount
-                }]);
+                if(!code) { NotificationManager.warning('ກະລຸນາໃສ່ໂຄດ'); return; }
 
-                // เพิ่มเงินให้ผู้ใช้
-                const newBalance = (currentUser.balance || 0) + redeemCode.amount;
-                await _supabase.from('site_users').update({ balance: newBalance }).eq('id', currentUser.id);
-                
-                // อัปเดตจำนวนการใช้
-                const newCurrentUses = currentUses + 1;
-                
-                // ถ้าใช้ครบ → อัปเดตเป็น is_active=false แทนการลบ (เพื่อไม่ให้ FK code_redemptions พัง)
-                if(newCurrentUses >= maxUses) {
-                    await _supabase.from('redeem_codes').update({ current_uses: newCurrentUses, is_active: false }).eq('id', redeemCode.id);
-                } else {
-                    await _supabase.from('redeem_codes').update({ current_uses: newCurrentUses }).eq('id', redeemCode.id);
-                }
-                
-                await app._updateSpinProgress(redeemCode.amount);
-                NotificationManager.success(`ໃຊ້ໂຄດສຳເລັດ! ໄດ້ຮັບເງິນ ${redeemCode.amount.toLocaleString()} ₭`);
+                showProcessing('ກຳລັງກວດສອບໂຄດ<br>ກະລຸນາລໍຖ້າ...');
+
+                // ── ເອີ້ນ RPC — ທຸກການກວດສອບ ແລະ ບວກເງິນຢູ່ DB ──
+                const { data, error } = await _supabase.rpc('use_redeem_code', {
+                    p_user_id: currentUser.id,
+                    p_code:    code
+                });
+
                 hideProcessing();
-                
-                // อัปเดต currentUser
-                currentUser.balance = newBalance;
+
+                if(error) { NotificationManager.error('ເກີດຂໍ້ຜິດພາດ ກະລຸນາລອງໃໝ່'); return; }
+
+                const result = typeof data === 'string' ? JSON.parse(data) : data;
+                if(!result?.ok) { NotificationManager.error(result?.error || 'ໂຄດບໍ່ຖືກຕ້ອງ'); return; }
+
+                // ── ອັບເດດ UI ດ້ວຍຄ່າຈາກ DB ──
+                currentUser.balance = result.new_balance;
                 this.updateUserUI();
-                
-                // รีเซ็ตฟอร์ม
+                await app._updateSpinProgress(result.amount);
+                NotificationManager.success(`ໃຊ້ໂຄດສຳເລັດ! ໄດ້ຮັບເງິນ ${result.amount.toLocaleString()} ₭`);
                 document.getElementById('redeem-code').value = '';
             },
 
@@ -2525,24 +2403,23 @@ function togglePw(id, btn) {
             },
 
             approveTopup: async function(id) {
-                const { data: topup } = await _supabase.from('topup_requests').select('*').eq('id', id).single();
-                if(topup) {
-                    // ดึงข้อมูลผู้ใช้ปัจจุบัน
-                    const { data: user } = await _supabase.from('site_users').select('*').eq('id', topup.user_id).single();
-                    
-                    // อัปเดตยอดเงินผู้ใช้
-                    const newBalance = (user.balance || 0) + topup.amount;
-                    await _supabase.from('site_users').update({ balance: newBalance }).eq('id', topup.user_id);
-                    
-                    // ลบรายการเติมเงินทิ้งเลย (ไม่เปลืองพื้นที่ database)
-                    await _supabase.from('topup_requests').delete().eq('id', id);
-                    
-                    await app._updateSpinProgress(topup.amount, topup.user_id);
-                    NotificationManager.success('ອະນຸມັດສຳເລັດ! ລຶບລາຍການແລ້ວ');
-                    await this.fetchData();
-                    this.renderAdmin();
-                    this.tab('tab-topup-admin');
-                }
+                if(!await CustomConfirm.show('ຢືນຢັນອະນຸມັດການເຕີມເງິນນີ້?', {title:'ອະນຸມັດເຕີມເງິນ', icon:'fa-check-circle'})) return;
+
+                // ── ເອີ້ນ RPC — amount ດຶງຈາກ DB ເອງ Client ບໍ່ສາມາດ hack ໄດ້ ──
+                const { data, error } = await _supabase.rpc('approve_topup', {
+                    p_topup_id: id
+                });
+
+                if(error) { NotificationManager.error('ເກີດຂໍ້ຜິດພາດ: ' + error.message); return; }
+
+                const result = typeof data === 'string' ? JSON.parse(data) : data;
+                if(!result?.ok) { NotificationManager.error(result?.error || 'ເກີດຂໍ້ຜິດພາດ'); return; }
+
+                await app._updateSpinProgress(result.amount, result.user_id);
+                NotificationManager.success('ອະນຸມັດສຳເລັດ!');
+                await this.fetchData();
+                this.renderAdmin();
+                this.tab('tab-topup-admin');
             },
 
             rejectTopup: async function(id) {
@@ -2642,9 +2519,15 @@ function togglePw(id, btn) {
                 if(pw.length < 6) { NotificationManager.error('ລະຫັດຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'); return; }
                 showProcessing('ກຳລັງບັນທຶກ...');
                 try {
-                    const { error } = await _supabase.from('site_users').update({ password: pw }).eq('id', this._forgotUserId);
+                    // ── RPC: hash ລະຫັດໃໝ່ຢູ່ DB ──
+                    const { data: result, error } = await _supabase.rpc('admin_reset_password', {
+                        p_user_id:      this._forgotUserId,
+                        p_new_password: pw
+                    });
                     hideProcessing();
                     if(error) throw error;
+                    const res = typeof result === 'string' ? JSON.parse(result) : result;
+                    if(!res?.ok) { NotificationManager.error(res?.error || 'ເກີດຂໍ້ຜິດພາດ'); return; }
                     NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
                     this._forgotUserId = null;
                     document.getElementById('reset-form').style.display = 'none';
@@ -2807,43 +2690,32 @@ function togglePw(id, btn) {
 
                 try {
                     showProcessing('ກຳລັງສ້າງບັນຊີ<br>ກະລຸນາລໍຖ້າສັກຄູ່...');
+
+                    // ── ກວດ username ຊໍ້າ ──
                     const { data: existing } = await _supabase
-                        .from('site_users')
-                        .select('id')
-                        .eq('username', username)
-                        .single();
+                        .from('site_users').select('id').eq('username', username).maybeSingle();
+                    if(existing) { hideProcessing(); NotificationManager.error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກໃຊ້ແລ້ວ'); return; }
 
-                    if(existing) {
-                        hideProcessing();
-                        NotificationManager.error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກໃຊ້ແລ້ວ');
-                        return;
-                    }
+                    // ── ໃຊ້ RPC ສ້າງ account — DB hash password ດ້ວຍ crypt() ──
+                    const { data: result, error: rpcErr } = await _supabase.rpc('register_user', {
+                        p_username: username,
+                        p_password: password,
+                        p_pin:      pin
+                    });
 
-                    const { data, error } = await _supabase
-                        .from('site_users')
-                        .insert([{
-                            username: username,
-                            pin: pin,
-                            password: password,
-                            avatar_url: 'https://img5.pic.in.th/file/secure-sv1/17710495907562b12906e5c4d2a54.png',
-                            balance: 0,
-                            total_spent: 0,
-                            status: 'active'
-                        }])
-                        .select()
-                        .single();
+                    if(rpcErr) throw rpcErr;
+                    const res = typeof result === 'string' ? JSON.parse(result) : result;
+                    if(!res?.ok) { hideProcessing(); NotificationManager.error(res?.error || 'ເກີດຂໍ້ຜິດພາດ'); return; }
 
-                    if(error) throw error;
+                    // ── ດຶງ profile ຫຼັງ register ──
+                    const { data } = await _supabase.from('site_users').select('*').eq('id', res.id).single();
+                    if(!data) throw new Error('Profile not found');
 
                     hideProcessing();
                     NotificationManager.success('ສະໝັກສະມາຊິກສຳເລັດ!');
-                    // Generate session_token for new user
-                    const newToken = Date.now().toString(36) + Math.random().toString(36).substring(2);
-                    await _supabase.from('site_users').update({ session_token: newToken }).eq('id', data.id);
-                    data.session_token = newToken;
                     currentUser = data;
                     this.updateUserUI();
-                    this.saveUserSession();
+                    this.checkAdminAccess();
                     this._clearRegisterForm();
                     router.home();
                     
@@ -2859,71 +2731,26 @@ function togglePw(id, btn) {
                 if(!cfToken || !cfToken.value) { NotificationManager.warning('ກະລຸນາຢືນຢັນວ່າທ່ານບໍ່ແມ່ນ Bot ກ່ອນ'); return; }
                 const username = document.getElementById('login-username').value.trim();
                 const password = document.getElementById('login-password').value;
-
-                if(!username || !password) {
-                    NotificationManager.warning('ກະລຸນາກອກຊື່ຜູ້ໃຊ້ແລະລະຫັດຜ່ານ');
-                    return;
-                }
+                if(!username || !password) { NotificationManager.warning('ກະລຸນາກອກຊື່ຜູ້ໃຊ້ແລະລະຫັດຜ່ານ'); return; }
 
                 showProcessing('ກຳລັງກວດສອບຂໍ້ມູນ<br>ກະລຸນາລໍຖ້າສັກຄູ່...');
                 try {
-                    // ลองหาใน site_users ก่อน (User ใหม่)
-                    const { data: siteUser, error: siteError } = await _supabase
-                        .from('site_users')
-                        .select('*')
-                        .eq('username', username)
-                        .eq('password', password)
-                        .maybeSingle();
+                    // ── ໃຊ້ RPC — DB ກວດ password hash ເອງ ──
+                    const { data: result, error: rpcErr } = await _supabase.rpc('login_user', {
+                        p_username: username,
+                        p_password: password
+                    });
 
-                    // ถ้าไม่เจอใน site_users ลองหาใน users (Admin เก่า)
-                    if(!siteUser) {
-                        const { data: adminUser, error: adminError } = await _supabase
-                            .from('users')
-                            .select('*')
-                            .eq('username', username)
-                            .eq('password', password)
-                            .maybeSingle();
-                        
-                        if(!adminUser) {
-                            hideProcessing();
-                            NotificationManager.error('ຊື່ຜູ້ໃຊ້ຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ');
-                            return;
-                        }
-                        
-                        // Login สำเร็จด้วย Admin เก่า
-                        currentUser = {
-                            id: 'admin_' + adminUser.id,
-                            username: adminUser.username,
-                            password: adminUser.password,
-                            is_admin: true,
-                            balance: 0,
-                            avatar_url: 'https://img5.pic.in.th/file/secure-sv1/17710495907562b12906e5c4d2a54.png',
-                            status: 'active'
-                        };
-                        
-                        this.updateUserUI();
-                        this.checkAdminAccess();
-                        router.home();
-                        hideProcessing();
-                        NotificationManager.success(`ຍິນດີຕ້ອນຮັບ Admin ${username}!`);
-                        return;
-                    }
+                    if(rpcErr) { hideProcessing(); NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); return; }
 
-                    if(siteUser.status === 'banned') {
-                        hideProcessing();
-                        NotificationManager.error('ບັນຊີຖືກລະງັບ');
-                        return;
-                    }
+                    const res = typeof result === 'string' ? JSON.parse(result) : result;
+                    if(!res?.ok) { hideProcessing(); NotificationManager.error(res?.error || 'ຊື່ຜູ້ໃຊ້ຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ'); return; }
 
-                    await _supabase
-                        .from('site_users')
-                        .update({ last_login: new Date().toISOString() })
-                        .eq('id', siteUser.id);
+                    // ── ດຶງ profile ──
+                    const { data: siteUser } = await _supabase
+                        .from('site_users').select('*').eq('id', res.id).single();
 
-                    // ສ້າງ session_token ໃໝ່ ແລະ save ໄວ້ໃນ DB
-                    const newToken = Date.now().toString(36) + Math.random().toString(36).substring(2);
-                    await _supabase.from('site_users').update({ session_token: newToken }).eq('id', siteUser.id);
-                    siteUser.session_token = newToken;
+                    if(!siteUser) { hideProcessing(); NotificationManager.error('ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້'); return; }
 
                     currentUser = siteUser;
                     this.updateUserUI();
@@ -2931,7 +2758,6 @@ function togglePw(id, btn) {
                     this.saveUserSession();
                     router.home();
                     hideProcessing();
-                    // Clear login form after success
                     this._clearLoginForm();
                     NotificationManager.success(`ຍິນດີຕ້ອນຮັບ ${username}!`);
 
@@ -2946,7 +2772,6 @@ function togglePw(id, btn) {
                 if(await CustomConfirm.show('ແນ່ໃຈບໍ່ວ່າຕ້ອງການອອກຈາກລະບົບ?', {title:'ອອກຈາກລະບົບ', icon:'fa-sign-out-alt'})) {
                     currentUser = null;
                     localStorage.removeItem('user_session');
-                    // Reload ໜ້າເວັບໃໝ່
                     location.reload();
                 }
             },
@@ -3014,31 +2839,23 @@ function togglePw(id, btn) {
 
             loadUserSession: async function() {
                 const session = localStorage.getItem('user_session');
-                if(session) {
-                    try {
-                        const { id, session_token } = JSON.parse(session);
-                        const { data } = await _supabase
-                            .from('site_users')
-                            .select('*')
-                            .eq('id', id)
-                            .single();
-                        
-                        if(data && data.status === 'active') {
-                            // ກວດສອບ session_token — ຖ້າລະຫັດຜ່ານຖືກປ່ຽນ token ຈະບໍ່ຕົງກັນ
-                            if(data.session_token && session_token && data.session_token !== session_token) {
-                                localStorage.removeItem('user_session');
-                                NotificationManager.warning('ລະຫັດຜ່ານຖືກປ່ຽນ, ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່');
-                                return;
-                            }
-                            currentUser = data;
-                            this.updateUserUI();
-                        } else {
+                if(!session) return;
+                try {
+                    const { id, session_token } = JSON.parse(session);
+                    const { data } = await _supabase.from('site_users').select('*').eq('id', id).single();
+                    if(data && data.status === 'active') {
+                        if(data.session_token && session_token && data.session_token !== session_token) {
                             localStorage.removeItem('user_session');
+                            NotificationManager.warning('ລະຫັດຜ່ານຖືກປ່ຽນ, ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່');
+                            return;
                         }
-                    } catch(error) {
-                        console.error('Session load error:', error);
+                        currentUser = data;
+                        this.updateUserUI();
+                        this.checkAdminAccess();
+                    } else {
+                        localStorage.removeItem('user_session');
                     }
-                }
+                } catch(e) { console.error('Session load error:', e); }
             },
 
             openChangePassword: function() {
@@ -3054,54 +2871,44 @@ function togglePw(id, btn) {
                 const newPass = document.getElementById('new-password').value;
                 const confirm = document.getElementById('confirm-password').value;
 
-                if(!current || !newPass || !confirm) {
-                    NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນ');
-                    return;
-                }
-                if(current !== currentUser.password) {
-                    NotificationManager.error('ລະຫັດຜ່ານປັດຈຸບັນບໍ່ຖືກ');
-                    return;
-                }
-                if(newPass !== confirm) {
-                    NotificationManager.error('ລະຫັດໃໝ່ບໍ່ຕົງກັນ');
-                    return;
-                }
+                if(!current || !newPass || !confirm) { NotificationManager.warning('ກະລຸນາກອກຂໍ້ມູນ'); return; }
+                if(newPass !== confirm) { NotificationManager.error('ລະຫັດໃໝ່ບໍ່ຕົງກັນ'); return; }
 
-                // ກວດ password strength ເໝືອນຕອນສະໝັກ
                 const checks = {
-                    upper: /[A-Z]/.test(newPass),
-                    lower: /[a-z]/.test(newPass),
+                    upper: /[A-Z]/.test(newPass), lower: /[a-z]/.test(newPass),
                     num: /[0-9]/.test(newPass),
                     special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(newPass),
                     long: newPass.length >= 8
                 };
-                const score = Object.values(checks).filter(Boolean).length;
-                if(score < 5) {
-                    let missing = [];
-                    if(!checks.upper) missing.push('ຕົວພິມໃຫຍ່ A-Z');
-                    if(!checks.lower) missing.push('ຕົວພິມນ້ອຍ a-z');
-                    if(!checks.num) missing.push('ຕົວເລກ 0-9');
-                    if(!checks.special) missing.push('ອັກຂະລະພິເສດ !@#$');
-                    if(!checks.long) missing.push('ຢ່າງໜ້ອຍ 8 ຕົວ');
-                    NotificationManager.error('ລະຫັດຜ່ານບໍ່ເຂັ້ມແຂງ! ຍັງຂາດ: ' + missing.join(', '));
+                if(Object.values(checks).filter(Boolean).length < 5) {
+                    let m = [];
+                    if(!checks.upper) m.push('A-Z'); if(!checks.lower) m.push('a-z');
+                    if(!checks.num) m.push('0-9'); if(!checks.special) m.push('!@#$');
+                    if(!checks.long) m.push('8+ ຕົວ');
+                    NotificationManager.error('ລະຫັດຜ່ານບໍ່ເຂັ້ມແຂງ! ຍັງຂາດ: ' + m.join(', '));
                     return;
                 }
 
-                // ສ້າງ session_token ໃໝ່ ເພື່ອ force logout ທຸກ device
-                const newToken = Date.now().toString(36) + Math.random().toString(36).substring(2);
                 showProcessing('ກຳລັງປ່ຽນລະຫັດ...');
-                await _supabase.from('site_users').update({ 
-                    password: newPass,
-                    session_token: newToken
-                }).eq('id', currentUser.id);
-                
-                currentUser.password = newPass;
+
+                // ── RPC: ກວດລະຫັດເກົ່າ + hash ລະຫັດໃໝ່ຢູ່ DB ──
+                const { data: result, error } = await _supabase.rpc('change_password', {
+                    p_user_id:    currentUser.id,
+                    p_old_password: current,
+                    p_new_password: newPass
+                });
+
+                hideProcessing();
+                if(error) { NotificationManager.error('ເກີດຂໍ້ຜິດພາດ'); return; }
+
+                const res = typeof result === 'string' ? JSON.parse(result) : result;
+                if(!res?.ok) { NotificationManager.error(res?.error || 'ລະຫັດຜ່ານປັດຈຸບັນບໍ່ຖືກ'); return; }
+
+                // ── ອັບເດດ session_token ໃໝ່ force logout ທຸກ device ──
+                const newToken = res.new_session_token;
                 currentUser.session_token = newToken;
                 this.saveUserSession();
-                hideProcessing();
                 NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
-                
-                // Reload ໜ້າເວັບໃໝ່
                 setTimeout(() => { location.reload(); }, 1500);
             },
 
@@ -3228,9 +3035,15 @@ function togglePw(id, btn) {
                 }
                 showProcessing('ກຳລັງບັນທຶກ...');
                 try {
-                    const { error } = await _supabase.from('site_users').update({ password: pw }).eq('id', this._forgotUserId);
+                    // ── RPC: hash ລະຫັດໃໝ່ຢູ່ DB ──
+                    const { data: result, error } = await _supabase.rpc('admin_reset_password', {
+                        p_user_id:      this._forgotUserId,
+                        p_new_password: pw
+                    });
                     hideProcessing();
                     if(error) throw error;
+                    const res = typeof result === 'string' ? JSON.parse(result) : result;
+                    if(!res?.ok) { NotificationManager.error(res?.error || 'ເກີດຂໍ້ຜິດພາດ'); return; }
                     NotificationManager.success('ປ່ຽນລະຫັດຜ່ານສຳເລັດ!');
                     this._forgotUserId = null;
                     setTimeout(() => { location.reload(); }, 1500);

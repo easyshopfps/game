@@ -603,7 +603,6 @@
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-overview')">ພາບລວມ</button>
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-p')">ສິນຄ້າ</button>
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-c')">ໝວດໝູ່</button>
-            <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-u')">Admin</button>
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-members')">ສະມາຊິກ</button>
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-announcement')">ປະກາດ</button>
             <button class="btn btn-red btn-sm" style="white-space: nowrap;" onclick="app.tab('tab-pop')">Popup</button>
@@ -700,20 +699,6 @@
             </div>
         </div>
 
-        <div id="tab-u" class="admin-tab hidden">
-             <div style="background:#111; padding:15px; border-radius:12px; margin-bottom:20px;">
-                <input type="text" id="u-user" class="form-control" placeholder="Username">
-                <input type="text" id="u-pass" class="form-control" placeholder="Password">
-                <button class="btn btn-red" style="width:100%" onclick="app.saveUser()">ເພີ່ມ Admin</button>
-            </div>
-            <div class="admin-table-container">
-                <table class="admin-table">
-                    <thead><tr><th>User</th><th>Pass</th><th>ລົບ</th></tr></thead>
-                    <tbody id="t-users"></tbody>
-                </table>
-            </div>
-        </div>
-
         <!-- ===== Admin: ຈັດການສະມາຊິກ (ແບບຄົ້ນຫາ) ===== -->
         <div id="tab-members" class="admin-tab hidden">
             <div style="background:#111; padding:15px; border-radius:12px; margin-bottom:20px;">
@@ -752,9 +737,15 @@
                     <input type="number" id="member-spent" class="form-control" placeholder="ຍອດໃຊ້ຈ່າຍທັງໝົດ" style="margin-bottom:10px;">
                     
                     <label style="font-size:13px; color:var(--text-dim); margin-bottom:8px; display:block;">🔐 ສະຖານະບັນຊີ:</label>
-                    <select id="member-status" class="form-control" style="margin-bottom:15px;">
+                    <select id="member-status" class="form-control" style="margin-bottom:12px;">
                         <option value="active">✅ ເປີດໃຊ້ງານ</option>
                         <option value="banned">🚫 ລະງັບການໃຊ້ງານ</option>
+                    </select>
+
+                    <label style="font-size:13px; color:var(--text-dim); margin-bottom:8px; display:block;">🔑 ສິດ Admin:</label>
+                    <select id="member-is-admin" class="form-control" style="margin-bottom:15px;">
+                        <option value="false">👤 ສະມາຊິກທົ່ວໄປ</option>
+                        <option value="true">🔑 Admin</option>
                     </select>
                     
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
@@ -772,7 +763,7 @@
             </div>
             <div class="admin-table-container">
                 <table class="admin-table">
-                    <thead><tr><th>ID</th><th>ຊື່ຜູ້ໃຊ້</th><th>ຍອດເງິນ</th><th>ສະຖານະ</th><th>ວັນທີສະໝັກ</th></tr></thead>
+                    <thead><tr><th>ID</th><th>ຊື່ຜູ້ໃຊ້</th><th>ຍອດເງິນ</th><th>Admin</th><th>ສະຖານະ</th><th>ວັນທີ</th></tr></thead>
                     <tbody id="t-members"></tbody>
                 </table>
             </div>
@@ -1184,16 +1175,6 @@
                     <span class="social-btn-subtitle">ຕິດຕໍ່ເຮົາ</span>
                 </div>
             </a>
-        </div>
-    </div>
-
-    <div id="login-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width:320px;">
-            <h3>Admin Login</h3><br>
-            <input type="text" id="log-u" class="form-control" placeholder="Username">
-            <input type="password" id="log-p" class="form-control" placeholder="Password">
-            <button class="btn btn-red" style="width:100%" onclick="app.login()">Login</button>
-            <p onclick="app.closeModal('login-modal')" style="margin-top:15px; font-size:12px; color:var(--text-dim); cursor:pointer;">ຍົກເລີກ</p>
         </div>
     </div>
 
